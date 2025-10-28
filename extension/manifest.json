@@ -3,6 +3,9 @@
 	"description": "Extension to track listening data from YouTube",
 	"version": "1.0",
 	"manifest_version": 3,
+	"background": {
+		"service_worker": "background.js"
+	},
 	"action": {
 		"default_popup": "popup.html",
 		"default_icon": {
@@ -18,5 +21,6 @@
 			"js": ["scripts/main.js"]
 		}
 	],
-	"permissions": []
+	"permissions": ["storage"],
+	"host_permissions": ["http://localhost:1234/*"]
 }

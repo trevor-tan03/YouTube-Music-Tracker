@@ -79,7 +79,7 @@ async function onNewVideoLoaded() {
 		expandBtn.click();
 		await new Promise((r) => setTimeout(r, 1000)); // wait for it to expand
 		const description = document
-			.querySelector("#expanded")
+			.querySelector("#expanded.style-scope.ytd-text-inline-expander")
 			.innerText.trim();
 		return description;
 	}

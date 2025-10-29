@@ -36,7 +36,7 @@ export async function analyseVideo(req, res) {
 		}
 
 		// If not, make request to LLM to determine if video's a song or not
-		await analyzeWithLLM(
+		const result = await analyzeWithLLM(
 			videoId,
 			info,
 			title,
@@ -45,9 +45,14 @@ export async function analyseVideo(req, res) {
 			thumbnailUrl
 		);
 
-		return res.status(200).json({
-			message: "bruh",
-		});
+		if (result) {
+			console.log(result);
+			return res.status(200).json({
+				message: result,
+			});
+		} else {
+			throw new Error("Invalid LLM output format");
+		}
 	} catch (err) {
 		console.error("Error in analyseVideo:", err);
 		res.status(500).json({ error: err.message });

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { validateLLMOutput } from "./checkResponseFormat.js";
 
 // Initialize LM Studio client (uses OpenAI-compatible API)
 const lmStudio = new OpenAI({
@@ -75,5 +76,6 @@ export async function analyzeWithLLM(
 
 	// Parse the LLM response
 	const responseText = completion.choices[0].message.content;
-	console.log(responseText);
+	const result = validateLLMOutput(responseText);
+	return result;
 }

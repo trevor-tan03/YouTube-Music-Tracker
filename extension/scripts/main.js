@@ -86,8 +86,8 @@ function onNewVideoLoaded() {
 		}
 	};
 
-	let timeout = setTimeout(async () => {
-		const { isSong, details } = getSongInfo();
+	setTimeout(async () => {
+		const { isSong, song } = getSongInfo();
 		if (isSong) return;
 
 		const url = "http://localhost:1234/v1/chat/completions";
@@ -104,16 +104,15 @@ function onNewVideoLoaded() {
 				{
 					role: "system",
 					content: `You are a classifier that determines if a YouTube video is a song or music video based on the video title and description.
-                    IMPORTANT:
-                        - DO NOT include music reactions
-                        - DO NOT include anime fights with music
-                        - DO NOT include parodies
-                        - Please look at both the title and description before coming to a conclusion
-                        Respond with a JSON object {"isSong": true|false, "artist": string, "song": string}.`,
+                        Respond with a JSON object {"isSong": true|false, "artist": string, "song": string}.
+                        Song names are typically before or after a hyphen (-) or before a forward slash (/).`,
 				},
 				{
 					role: "user",
-					content: `Title: ${title}\nChannel: ${channel}\nDescription: ${description}`,
+					content: `
+                    If you spot both a valid artist and song name, consider it to be a song.
+                    However, do not include reaction videos to music.
+                    Title: ${title}\nChannel: ${channel}\nDescription: ${description}`,
 				},
 			],
 			temperature: 0.2,
@@ -162,16 +161,20 @@ function getSongInfo() {
 	let song = {};
 
 	try {
-		song.title = document.querySelector(
+		const music = document.querySelector(
+			"ytd-horizontal-card-list-renderer"
+		);
+
+		song.title = music.querySelector(
 			".yt-video-attribute-view-model__title"
 		).innerText;
-		song.artist = document.querySelector(
+		song.artist = music.querySelector(
 			".yt-video-attribute-view-model__subtitle"
 		).innerText;
-		song.album = document.querySelector(
+		song.album = music.querySelector(
 			".yt-video-attribute-view-model__secondary-subtitle"
 		).innerText;
-		song.cover = document.querySelector(
+		song.cover = music.querySelector(
 			".yt-video-attribute-view-model__hero-image"
 		).src;
 

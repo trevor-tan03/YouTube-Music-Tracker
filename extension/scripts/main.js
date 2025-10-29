@@ -51,155 +51,92 @@ function getVideoId() {
 	return url.searchParams.get("v");
 }
 
-function onNewVideoLoaded() {
+async function onNewVideoLoaded() {
 	if (isPlaying) {
 		stopTracking();
 	}
 
-	const getDescriptionFromJSONLD = () => {
-		const scriptTag = document.querySelector(
-			'script[type="application/ld+json"]'
-		);
-		if (scriptTag) {
-			try {
-				const data = JSON.parse(scriptTag.textContent);
-				return data.description || "";
-			} catch (e) {
-				console.error("Error parsing JSON-LD:", e);
-				return "";
-			}
-		}
-		return "";
+	const url = "http://localhost:3000/analyse";
+
+	function waitForElement(selector, timeout = 10000) {
+		return new Promise((resolve, reject) => {
+			const interval = setInterval(() => {
+				const el = document.querySelector(selector);
+				if (el) {
+					clearInterval(interval);
+					resolve(el);
+				}
+			}, 200);
+			setTimeout(() => {
+				clearInterval(interval);
+				reject(new Error(`Timeout: ${selector} not found`));
+			}, timeout);
+		});
+	}
+
+	async function getDescription() {
+		const expandBtn = await waitForElement("#expand");
+		expandBtn.click();
+		await new Promise((r) => setTimeout(r, 1000)); // wait for it to expand
+		const description = document
+			.querySelector("#expanded")
+			.innerText.trim();
+		return description;
+	}
+
+	// Wait for video page to load fully
+	await new Promise((r) => setTimeout(r, 5000));
+
+	const videoId = getVideoId();
+	const info = document.querySelector("#info-container").innerText;
+	const title = document.title.replace(" - YouTube", "");
+	const channel =
+		document.querySelector("#owner")?.innerText.split("\n")[0] || "";
+	const description = await getDescription();
+	document.querySelector("#expand").click(); // collapse the description
+
+	const payload = {
+		title,
+		info,
+		channel,
+		description,
+		videoId,
+		thumbnailUrl: `https://img.youtube.com/vi/${videoId}/default.jpg`,
 	};
 
-	const extractJsonObject = (text) => {
-		if (!text || typeof text !== "string") return null;
-		let body = text.trim();
-		const fenced = body.match(/```(?:json)?\s*([\s\S]*?)```/i);
-		if (fenced && fenced[1]) {
-			body = fenced[1].trim();
-		}
-		try {
-			return JSON.parse(body);
-		} catch (_) {
-			return null;
-		}
-	};
-
-	setTimeout(async () => {
-		const { isSong, song } = getSongInfo();
-		if (isSong) return;
-
-		const url = "http://localhost:1234/v1/chat/completions";
-
-		const title = document.title.replace(" - YouTube", "");
-		const channel = document
-			.querySelector("#owner")
-			.innerText.split("\n")[0];
-		const description = getDescriptionFromJSONLD();
-
-		const payload = {
-			model: "liquid/lfm2-1.2b",
-			messages: [
-				{
-					role: "system",
-					content: `You are a classifier that determines if a YouTube video is a song or music video based on the video title and description.
-                        Respond with a JSON object {"isSong": true|false, "artist": string, "song": string}.
-                        Song names are typically before or after a hyphen (-) or before a forward slash (/).`,
-				},
-				{
-					role: "user",
-					content: `
-                    If you spot both a valid artist and song name, consider it to be a song.
-                    However, do not include reaction videos to music.
-                    Title: ${title}\nChannel: ${channel}\nDescription: ${description}`,
-				},
-			],
-			temperature: 0.2,
-		};
-
-		chrome.runtime.sendMessage(
-			{
-				type: "classifyVideo",
-				url,
-				payload,
-			},
-			(response) => {
-				if (!response) {
-					console.error("No response from background script");
-					return;
-				}
-				if (!response.ok) {
-					console.error("Classification request failed:", response);
-					return;
-				}
-				const messageContent =
-					response.data?.choices?.[0]?.message?.content || "";
-				const parsed = extractJsonObject(messageContent);
-				if (!parsed) {
-					console.warn(
-						"Could not parse classifier response. Raw:",
-						messageContent
-					);
-					return;
-				}
-				console.log("Classification:", {
-					isSong: parsed.isSong,
-					artist: parsed.artist,
-					song: parsed.song,
-				});
+	chrome.runtime.sendMessage(
+		{
+			type: "classifyVideo",
+			url,
+			payload,
+		},
+		(response) => {
+			if (!response) {
+				console.error("No response from background script");
+				return;
 			}
-		);
-	}, 3000);
+			if (!response.ok) {
+				console.error("Classification request failed:", response);
+				return;
+			} else {
+				console.log(response.json());
+			}
+		}
+	);
 
 	// Start checking playback or getting song info
 	trackPlayback();
 }
 
-function getSongInfo() {
-	let isSong = false;
-	let song = {};
-
-	try {
-		const music = document.querySelector(
-			"ytd-horizontal-card-list-renderer"
-		);
-
-		song.title = music.querySelector(
-			".yt-video-attribute-view-model__title"
-		).innerText;
-		song.artist = music.querySelector(
-			".yt-video-attribute-view-model__subtitle"
-		).innerText;
-		song.album = music.querySelector(
-			".yt-video-attribute-view-model__secondary-subtitle"
-		).innerText;
-		song.cover = music.querySelector(
-			".yt-video-attribute-view-model__hero-image"
-		).src;
-
-		// Send the song info to web server
-		console.log(`🎧 Playing: ${song.artist} - ${song.title}`);
-		isSong = true;
-	} catch (error) {
-		console.log("Could not find song from description");
-	}
-
-	return {
-		isSong,
-		song,
-	};
-}
-
 let currentVideoId;
 let timeoutId;
 
-window.addEventListener("yt-navigate-finish", () => {
+window.addEventListener("yt-navigate-finish", async () => {
 	const newId = getVideoId();
 
 	if (newId && newId !== currentVideoId) {
 		console.log("New video detected");
-		onNewVideoLoaded();
+		await onNewVideoLoaded();
 		currentVideoId = newId;
 	}
 });

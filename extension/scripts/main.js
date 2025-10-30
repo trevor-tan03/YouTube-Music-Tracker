@@ -28,16 +28,35 @@ function trackPlayback() {
 	}, 1000);
 }
 
-function stopTracking() {
+async function stopTracking() {
 	if (isPlaying) {
 		totalListenMs += Date.now() - startTime;
 		isPlaying = false;
 	}
 
+	const listeningTime = (totalListenMs / 1000).toFixed(1);
 	console.log(
-		`🛑 Stopped tracking video ${currentVideoId} — total listen time: ${(
-			totalListenMs / 1000
-		).toFixed(1)}s`
+		`🛑 Stopped tracking video ${currentVideoId} — total listen time: ${listeningTime}s`
+	);
+
+	chrome.runtime.sendMessage(
+		{
+			type: "listen",
+			videoId: currentVideoId,
+			listeningTime,
+		},
+		(response) => {
+			if (!response) {
+				console.error("No response from background script");
+				return;
+			}
+			if (!response.ok) {
+				console.error("Classification request failed:", response);
+				return;
+			} else {
+				console.log(response.json());
+			}
+		}
 	);
 
 	if (playbackInterval) {
@@ -55,8 +74,6 @@ async function onNewVideoLoaded() {
 	if (isPlaying) {
 		stopTracking();
 	}
-
-	const url = "http://localhost:3000/analyse";
 
 	function waitForElement(selector, timeout = 10000) {
 		return new Promise((resolve, reject) => {
@@ -93,7 +110,12 @@ async function onNewVideoLoaded() {
 	const channel =
 		document.querySelector("#owner")?.innerText.split("\n")[0] || "";
 	const description = await getDescription();
-	document.querySelector("#expand").click(); // collapse the description
+	const durationString = document
+		.querySelector(".ytp-time-duration")
+		.innerText.split(":");
+	const duration =
+		Number.parseInt(durationString[0]) * 60 +
+		Number.parseInt(durationString[1]);
 
 	const payload = {
 		title,
@@ -102,12 +124,12 @@ async function onNewVideoLoaded() {
 		description,
 		videoId,
 		thumbnailUrl: `https://img.youtube.com/vi/${videoId}/default.jpg`,
+		duration,
 	};
 
 	chrome.runtime.sendMessage(
 		{
 			type: "classifyVideo",
-			url,
 			payload,
 		},
 		(response) => {

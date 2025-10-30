@@ -11,7 +11,7 @@ export function validateLLMOutput(raw) {
 
 	// Define expected schema
 	const schema = {
-		isSong: "boolean",
+		isSong: "number", // 0 or 1
 		confidence: "number",
 		reasoning: "string",
 		extractedTitle: ["string", "object"], // allow null

@@ -30,7 +30,7 @@ export async function analyzeWithLLM(
 
   Please respond in JSON format with the following structure:
   {
-    "isSong": boolean,
+    "isSong": number (0|1),
     "confidence": number (0-1),
     "reasoning": "brief explanation",
     "extractedTitle": "the song title if it's a song, or null",
@@ -53,7 +53,8 @@ export async function analyzeWithLLM(
   - Commentary/review video
   - Trailer or movie clip
   - Gaming content
-  - Just background music in non-music content`;
+  - Just background music in non-music content
+  - Doesn't include both an artist name and song title`;
 
 	// Call the LLM API
 	const model = "liquid/lfm2-1.2b";

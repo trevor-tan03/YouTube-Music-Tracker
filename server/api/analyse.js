@@ -1,4 +1,5 @@
 import { db } from "../database.js";
+import { addVideo } from "../database/addVideo.js";
 import { analyzeWithLLM } from "../util/analyzeWithLLM.js";
 
 export async function analyseVideo(req, res) {
@@ -6,8 +7,6 @@ export async function analyseVideo(req, res) {
 		// Chrome extension sends video data to this endpoint
 		const { videoId, info, title, channel, description, thumbnailUrl } =
 			req.body;
-
-		console.log(req.body);
 
 		// Validate required fields
 		if (!videoId || !title || !channel) {
@@ -18,20 +17,12 @@ export async function analyseVideo(req, res) {
 
 		// Check if this video's already been analyzed
 		const existingVideo = db
-			.prepare(`SELECT * FROM videos WHERE video_id = ?`)
+			.prepare(`SELECT * FROM video WHERE id = ?`)
 			.get(videoId);
 
-		if (existingVideo) {
-			// Video already exists, return existing data
-			const analysis = db
-				.prepare(`SELECT * FROM video_analysis WHERE video_id = ?`)
-				.get(videoId);
-
-			return res.json({
-				alreadyExists: true,
-				video: existingVideo,
-				analysis: analysis,
-				message: "Video already analyzed",
+		if (existingVideo && existingVideo.is_song) {
+			return res.status(200).json({
+				message: "Tracking listening time 🎧",
 			});
 		}
 
@@ -46,9 +37,10 @@ export async function analyseVideo(req, res) {
 		);
 
 		if (result) {
-			console.log(result);
-			return res.status(200).json({
-				message: result,
+			const isSong = result.isSong;
+			addVideo({ ...req.body, isSong });
+			return res.status(201).json({
+				message: `Registered video as ${isSong ? "" : "NOT"} a song.`,
 			});
 		} else {
 			throw new Error("Invalid LLM output format");

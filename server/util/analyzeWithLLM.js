@@ -57,9 +57,8 @@ export async function analyzeWithLLM(
   - Doesn't include both an artist name and song title`;
 
 	// Call the LLM API
-	const model = "liquid/lfm2-1.2b";
 	const completion = await lmStudio.chat.completions.create({
-		model: "local-model", // LM Studio uses whatever model is loaded
+		model: "liquid/lfm2-1.2b", // LM Studio uses whatever model is loaded
 		messages: [
 			{
 				role: "system",

@@ -19,16 +19,17 @@ export async function addSongListeningTime(req, res) {
 			.prepare(`SELECT * FROM video WHERE id = ?`)
 			.get(videoId);
 
-		console.log(existingVideo);
-
 		if (existingVideo && existingVideo.is_song) {
 			const additionalTime = Number.parseInt(listeningTime);
 			increaseListeningTime(videoId, additionalTime);
 
+			const message = `Listening time of ${
+				existingVideo.title
+			} increased to: ${Math.floor(
+				(additionalTime + existingVideo.listening_time) / 60
+			)} mins`;
 			return res.status(200).json({
-				message: `Listening time increased to: ${
-					newListeningTime / 60
-				} mins`,
+				message,
 			});
 		}
 

@@ -7,9 +7,11 @@ export async function analyseVideo(req, res) {
 		// Chrome extension sends video data to this endpoint
 		const { videoId, info, title, channel, description, thumbnailUrl } =
 			req.body;
+		let message;
 
 		// Validate required fields
 		if (!videoId || !title || !channel) {
+			console.error("Missing required fields: videoId, title, channel");
 			return res.status(400).json({
 				error: "Missing required fields: videoId, title, channel",
 			});
@@ -21,8 +23,9 @@ export async function analyseVideo(req, res) {
 			.get(videoId);
 
 		if (existingVideo && existingVideo.is_song) {
+			message = "Tracking listening time 🎧";
 			return res.status(200).json({
-				message: "Tracking listening time 🎧",
+				message,
 			});
 		}
 
@@ -39,8 +42,9 @@ export async function analyseVideo(req, res) {
 		if (result) {
 			const isSong = result.isSong;
 			addVideo({ ...req.body, isSong });
+			message = `Registered ${title} as ${isSong ? "" : "NOT "}a song.`;
 			return res.status(201).json({
-				message: `Registered video as ${isSong ? "" : "NOT"} a song.`,
+				message,
 			});
 		} else {
 			throw new Error("Invalid LLM output format");

@@ -2,7 +2,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	if (!message) return;
 
 	switch (message.type) {
-		case "classifyVideo": {
+		case "analyse": {
 			const { payload } = message;
 			fetch("http://localhost:3000/analyse", {
 				method: "POST",
@@ -19,9 +19,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					sendResponse({ ok: false, error: String(err) });
 				});
 
-			return true;
+			return true; // Keep message channel open
 		}
-		case "listenVideo": {
+		case "listen": {
 			const { videoId, listeningTime } = message;
 			fetch("http://localhost:3000/listen", {
 				method: "POST",
@@ -37,6 +37,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				.catch((err) => {
 					sendResponse({ ok: false, error: String(err) });
 				});
+
+			return true; // ← ADD THIS! Keeps the message channel open for async response
 		}
 	}
 });

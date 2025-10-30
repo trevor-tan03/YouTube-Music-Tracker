@@ -8,7 +8,7 @@ export async function addSongListeningTime(req, res) {
 			return res.status(400).json({
 				error: "Missing required fields: videoId, listeningTime",
 			});
-		} else if (typeof listeningTime !== "number") {
+		} else if (isNaN(Number.parseInt(listeningTime))) {
 			return res.status(400).json({
 				error: "listeningTime must be a number",
 			});
@@ -19,10 +19,11 @@ export async function addSongListeningTime(req, res) {
 			.prepare(`SELECT * FROM video WHERE id = ?`)
 			.get(videoId);
 
+		console.log(existingVideo);
+
 		if (existingVideo && existingVideo.is_song) {
-			const newListeningTime =
-				existingVideo.listeningTime + listeningTime;
-			increaseListeningTime(videoId, newListeningTime);
+			const additionalTime = Number.parseInt(listeningTime);
+			increaseListeningTime(videoId, additionalTime);
 
 			return res.status(200).json({
 				message: `Listening time increased to: ${
@@ -31,15 +32,18 @@ export async function addSongListeningTime(req, res) {
 			});
 		}
 
-		return res.json(400).json({
+		return res.status(400).json({
 			error: "Provided video is not considered a song. Listening time will not be added.",
 		});
-	} catch (error) {}
+	} catch (error) {
+		return res.status(500).json({
+			error: `Failed to add listening time to song. ${error}`,
+		});
+	}
 }
 
-function increaseListeningTime(videoId, newListeningTime) {
-	db.prepare("UPDATE video SET listening_time = ? WHERE id = ?").get(
-		newListeningTime,
-		videoId
-	);
+function increaseListeningTime(videoId, additionalTime) {
+	db.prepare(
+		"UPDATE video SET listening_time = listening_time + ? WHERE id = ?"
+	).run(additionalTime, videoId);
 }

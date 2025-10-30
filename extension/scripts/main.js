@@ -51,10 +51,10 @@ async function stopTracking() {
 				return;
 			}
 			if (!response.ok) {
-				console.error("Classification request failed:", response);
+				console.error("Listening request failed:", response);
 				return;
 			} else {
-				console.log(response.json());
+				console.log(response.data);
 			}
 		}
 	);
@@ -129,7 +129,7 @@ async function onNewVideoLoaded() {
 
 	chrome.runtime.sendMessage(
 		{
-			type: "classifyVideo",
+			type: "analyse",
 			payload,
 		},
 		(response) => {
@@ -141,7 +141,7 @@ async function onNewVideoLoaded() {
 				console.error("Classification request failed:", response);
 				return;
 			} else {
-				console.log(response.json());
+				console.log(response.data);
 			}
 		}
 	);

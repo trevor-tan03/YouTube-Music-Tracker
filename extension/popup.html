@@ -4,8 +4,162 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>YouTube Music Tracker</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				width: 400px;
+				min-height: 500px;
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+					Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+				background: linear-gradient(135deg, #2e3440 0%, #363c47 100%);
+				color: #eceff4;
+			}
+
+			.header {
+				padding: 20px;
+				text-align: center;
+				background: rgba(32, 33, 36, 0.5);
+				backdrop-filter: blur(10px);
+			}
+
+			h1 {
+				font-size: 20px;
+				font-weight: 600;
+				margin-bottom: 5px;
+			}
+
+			.subtitle {
+				font-size: 12px;
+				opacity: 0.8;
+			}
+
+			.tracks-container {
+				padding: 15px;
+				max-height: 550px;
+				overflow-y: auto;
+			}
+
+			.tracks-container::-webkit-scrollbar {
+				width: 6px;
+			}
+
+			.tracks-container::-webkit-scrollbar-track {
+				background: rgba(32, 33, 36, 0.3);
+			}
+
+			.tracks-container::-webkit-scrollbar-thumb {
+				background: rgba(216, 222, 233, 0.3);
+				border-radius: 3px;
+			}
+
+			.track-item {
+				display: flex;
+				gap: 12px;
+				padding: 10px;
+				margin-bottom: 10px;
+				background: rgba(67, 76, 94, 0.4);
+				backdrop-filter: blur(10px);
+				border-radius: 8px;
+				transition: all 0.2s ease;
+				cursor: pointer;
+			}
+
+			.track-item:hover {
+				background: rgba(67, 76, 94, 0.7);
+				transform: translateX(3px);
+			}
+
+			.track-rank {
+				flex-shrink: 0;
+				width: 28px;
+				height: 28px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: rgba(136, 192, 208, 0.3);
+				border-radius: 6px;
+				font-weight: 700;
+				font-size: 14px;
+				color: #88c0d0;
+			}
+
+			.track-thumbnail {
+				flex-shrink: 0;
+				width: 60px;
+				height: 45px;
+				border-radius: 6px;
+				object-fit: cover;
+				background: #202124;
+			}
+
+			.track-info {
+				flex: 1;
+				min-width: 0;
+			}
+
+			.track-title {
+				font-size: 13px;
+				font-weight: 500;
+				margin-bottom: 4px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.track-duration {
+				font-size: 10px;
+				opacity: 0.8;
+				margin-left: 4px;
+			}
+
+			.track-channel {
+				font-size: 11px;
+				opacity: 0.8;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				margin-bottom: 4px;
+			}
+
+			.track-time {
+				font-size: 12px;
+				font-weight: 600;
+				background: rgba(255, 255, 255, 0.2);
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 4px;
+			}
+
+			.loading {
+				text-align: center;
+				padding: 40px 20px;
+				font-size: 14px;
+				opacity: 0.8;
+			}
+
+			.error {
+				text-align: center;
+				padding: 40px 20px;
+				font-size: 14px;
+				color: #ffcccb;
+			}
+		</style>
 	</head>
-	<body>
-		<h1>Top 3 Tracks this session:</h1>
+	<body style="border-radius: 10px">
+		<div class="header">
+			<h1>🎵 Top Tracks</h1>
+			<div class="subtitle">Your most listened songs</div>
+		</div>
+
+		<div class="tracks-container" id="tracks-container">
+			<div class="loading">Loading your top tracks...</div>
+		</div>
+
+		<script src="scripts/popup.js"></script>
 	</body>
 </html>

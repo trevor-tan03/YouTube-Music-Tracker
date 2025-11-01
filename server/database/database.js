@@ -11,10 +11,19 @@ db.prepare(
         channel TEXT,
         duration INTEGER,              -- video length in seconds
         is_song INTEGER DEFAULT 0,     -- boolean (0/1)
-        listening_time INTEGER DEFAULT 0,
         thumbnail_url TEXT
     );
     `
+).run();
+
+db.prepare(
+	`CREATE TABLE IF NOT EXISTS listening_session (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        video_id TEXT NOT NULL,
+        listening_time INTEGER DEFAULT 0,
+        started_at INTEGER DEFAULT (strftime('%s', 'now')),  -- Unix timestamp
+        FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE
+    )`
 ).run();
 
 // Main song table

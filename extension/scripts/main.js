@@ -162,3 +162,23 @@ window.addEventListener("yt-navigate-finish", async () => {
 		currentVideoId = newId;
 	}
 });
+
+window.addEventListener("beforeunload", (e) => {
+	if (isPlaying) {
+		totalListenMs += Date.now() - startTime;
+		isPlaying = false;
+	}
+
+	console.log(
+		`currentVideoId: ${currentVideoId}\ntotalListenTime: ${
+			totalListenMs / 1000
+		}s`
+	);
+	if (!currentVideoId || totalListenMs === 0) return;
+
+	chrome.runtime.sendMessage({
+		type: "listen",
+		videoId: currentVideoId,
+		listeningTime: (totalListenMs / 1000).toFixed(1),
+	});
+});

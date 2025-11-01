@@ -1,6 +1,10 @@
-import { db } from "../database.js";
+import { db } from "../database/database.js";
 
 export async function addSongListeningTime(req, res) {
+	res.setHeader("Access-Control-Allow-Origin", "*");
+	res.setHeader("Access-Control-Allow-Methods", "POST");
+	res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
 	try {
 		const { videoId, listeningTime } = req.body;
 
@@ -28,6 +32,7 @@ export async function addSongListeningTime(req, res) {
 			} increased to: ${Math.floor(
 				(additionalTime + existingVideo.listening_time) / 60
 			)} mins`;
+			console.log(message);
 			return res.status(200).json({
 				message,
 			});

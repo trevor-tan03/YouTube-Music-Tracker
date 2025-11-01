@@ -1,5 +1,5 @@
-import { db } from "../database.js";
 import { addVideo } from "../database/addVideo.js";
+import { db } from "../database/database.js";
 import { analyzeWithLLM } from "../util/analyzeWithLLM.js";
 
 export async function analyseVideo(req, res) {
@@ -23,7 +23,8 @@ export async function analyseVideo(req, res) {
 			.get(videoId);
 
 		if (existingVideo && existingVideo.is_song) {
-			message = "Tracking listening time 🎧";
+			message = `Tracking listening time of ${existingVideo.title} 🎧`;
+			console.log(message);
 			return res.status(200).json({
 				message,
 			});
@@ -43,6 +44,7 @@ export async function analyseVideo(req, res) {
 			const isSong = result.isSong;
 			addVideo({ ...req.body, isSong });
 			message = `Registered ${title} as ${isSong ? "" : "NOT "}a song.`;
+			console.log(message);
 			return res.status(201).json({
 				message,
 			});

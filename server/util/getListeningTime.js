@@ -60,8 +60,6 @@ export async function getTopListensInPeriod(period) {
 	LIMIT 10
 `;
 
-	console.log(period, query);
-
 	const rows = db.prepare(query).all();
 	return rows;
 }

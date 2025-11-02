@@ -6,11 +6,14 @@
 
 body {
 	width: 400px;
-	min-height: 500px;
+	height: 600px;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
 		Ubuntu, Cantarell, sans-serif;
 	background: linear-gradient(135deg, #2e3440 0%, #363c47 100%);
 	color: #eceff4;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
 .header {
@@ -18,6 +21,7 @@ body {
 	text-align: center;
 	background: rgba(32, 33, 36, 0.5);
 	backdrop-filter: blur(10px);
+	flex-shrink: 0;
 }
 
 h1 {
@@ -37,6 +41,7 @@ h1 {
 	padding: 15px;
 	background: rgba(32, 33, 36, 0.3);
 	overflow-x: auto;
+	flex-shrink: 0;
 }
 
 .tabs::-webkit-scrollbar {
@@ -77,8 +82,8 @@ h1 {
 
 .tracks-container {
 	padding: 15px;
-	max-height: 550px;
 	overflow-y: auto;
+	flex: 1;
 }
 
 .tracks-container::-webkit-scrollbar {

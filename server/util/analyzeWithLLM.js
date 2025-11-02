@@ -30,7 +30,7 @@ export async function analyzeWithLLM(
 
   Please respond in JSON format with the following structure:
   {
-    "isSong": number (0|1),
+    "isSong": boolean (true|false) depending on whether it's a song or not,
     "confidence": number (0-1),
     "reasoning": "brief explanation",
     "extractedTitle": "the song title if it's a song, or null",

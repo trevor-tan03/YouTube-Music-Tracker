@@ -24,13 +24,11 @@ export async function addSongListeningTime(req, res) {
 			.get(videoId);
 
 		if (existingVideo && existingVideo.is_song) {
-			const additionalTime = Number.parseInt(listeningTime);
-			increaseListeningTime(videoId, additionalTime);
+			const sessionListeningTime = Number.parseInt(listeningTime);
+			addListeningSession(videoId, sessionListeningTime);
 
-			const message = `Listening time of ${
-				existingVideo.title
-			} increased to: ${Math.floor(
-				(additionalTime + existingVideo.listening_time) / 60
+			const message = `${existingVideo.title} +${Math.floor(
+				sessionListeningTime / 60
 			)} mins`;
 			console.log(message);
 			return res.status(200).json({
@@ -48,8 +46,8 @@ export async function addSongListeningTime(req, res) {
 	}
 }
 
-function increaseListeningTime(videoId, additionalTime) {
+function addListeningSession(videoId, sessionListeningTime) {
 	db.prepare(
-		"UPDATE video SET listening_time = listening_time + ? WHERE id = ?"
-	).run(additionalTime, videoId);
+		"INSERT INTO listening_session (video_id, listening_time) VALUES (?, ?)"
+	).run(videoId, sessionListeningTime);
 }

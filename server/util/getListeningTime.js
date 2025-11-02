@@ -1,3 +1,5 @@
+import { db } from "../database/database.js";
+
 /*
 period: "day", "week", "month", "year", "all"
 return: listening time in seconds
@@ -9,35 +11,41 @@ if period is "year", return the listening time for the current year
 if period is "all", return the listening time for all time
 if period is not provided, return the listening time for the current day
 */
-async function getListeningTime(videoId, period) {
+export async function getTopListensInPeriod(period) {
 	let query = `
-		SELECT SUM(listening_time) as total
-		FROM listening_session
-		WHERE video_id = ?
-	`;
+	SELECT 
+		v.id as video_id,
+		v.title,
+		v.channel,
+		v.duration,
+		v.thumbnail_url,
+		SUM(ls.listening_time) as total_listening_time
+	FROM listening_session ls
+	JOIN video v ON ls.video_id = v.id
+	WHERE 1=1
+`;
 
 	switch (period) {
 		case "day":
-			query += ` AND date(started_at, 'unixepoch') = date('now')`;
+			query += ` AND date(ls.started_at, 'unixepoch') = date('now')`;
 			break;
 
 		case "week":
 			query += `
-                    AND strftime('%W', started_at, 'unixepoch') = strftime('%W', 'now')
-                    AND strftime('%Y', started_at, 'unixepoch') = strftime('%Y', 'now')
-                `;
+			AND strftime('%W-%Y', ls.started_at, 'unixepoch') = strftime('%W-%Y', 'now')
+		`;
 			break;
 
 		case "month":
 			query += `
-                    AND strftime('%m-%Y', started_at, 'unixepoch') = strftime('%m-%Y', 'now')
-                `;
+			AND strftime('%m-%Y', ls.started_at, 'unixepoch') = strftime('%m-%Y', 'now')
+		`;
 			break;
 
 		case "year":
 			query += `
-                    AND strftime('%Y', started_at, 'unixepoch') = strftime('%Y', 'now')
-                `;
+			AND strftime('%Y', ls.started_at, 'unixepoch') = strftime('%Y', 'now')
+		`;
 			break;
 
 		case "all":
@@ -46,6 +54,14 @@ async function getListeningTime(videoId, period) {
 			break;
 	}
 
-	const row = db.prepare(query).get(videoId);
-	return row?.total ?? 0; // return 0 if null
+	query += `
+	GROUP BY v.id
+	ORDER BY total_listening_time DESC
+	LIMIT 10
+`;
+
+	console.log(period, query);
+
+	const rows = db.prepare(query).all();
+	return rows;
 }

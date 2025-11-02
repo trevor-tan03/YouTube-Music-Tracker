@@ -9,5 +9,12 @@ export function addVideo(videoDetails) {
 	const { videoId, title, duration, channel, thumbnailUrl, isSong } =
 		videoDetails;
 
-	insertVideo.run(videoId, title, channel, duration, thumbnailUrl, isSong);
+	insertVideo.run(
+		videoId,
+		title,
+		channel,
+		duration,
+		thumbnailUrl,
+		isSong ? 1 : 0
+	);
 }

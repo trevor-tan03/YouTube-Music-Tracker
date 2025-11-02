@@ -3,6 +3,7 @@ function formatTime(seconds) {
 	if (minutes < 60) {
 		return `${minutes} min`;
 	}
+
 	const hours = Math.floor(minutes / 60);
 	const remainingMins = minutes % 60;
 	return `${hours}h ${remainingMins}m`;
@@ -31,7 +32,7 @@ function createTrackElement(listen, index) {
             <div class="track-channel">${listen.channel}</div>
             <div class="track-stats">
                 <div class="track-time">${formatTime(
-					listen.listening_time
+					listen.total_listening_time
 				)}</div>
             </div>
         </div>
@@ -44,14 +45,26 @@ function createTrackElement(listen, index) {
 	return trackItem;
 }
 
-function getTopListens() {
+function getTopListens(period = "all") {
 	const container = document.getElementById("tracks-container");
 
-	fetch("http://localhost:3000/top-listens")
+	// Show loading state
+	container.innerHTML =
+		'<div class="loading">Loading your top tracks...</div>';
+
+	fetch(`http://localhost:3000/top-listens?period=${period}`)
 		.then((response) => response.json())
 		.then((data) => {
 			container.innerHTML = "";
-			data.forEach((listen, index) => {
+
+			if (data.length === 0) {
+				container.innerHTML =
+					'<div class="error">No tracks found for this period.</div>';
+				return;
+			}
+
+			// Display top 10 tracks
+			data.slice(0, 10).forEach((listen, index) => {
 				container.appendChild(createTrackElement(listen, index));
 			});
 		})
@@ -62,4 +75,26 @@ function getTopListens() {
 		});
 }
 
-getTopListens();
+// Add event listeners to tabs
+document.addEventListener("DOMContentLoaded", () => {
+	const tabs = document.querySelectorAll(".tab");
+
+	tabs.forEach((tab) => {
+		tab.addEventListener("click", () => {
+			// Remove active class from all tabs
+			tabs.forEach((t) => t.classList.remove("active"));
+
+			// Add active class to clicked tab
+			tab.classList.add("active");
+
+			// Get the period from data attribute
+			const period = tab.getAttribute("data-period");
+
+			// Fetch and display tracks for the selected period
+			getTopListens(period);
+		});
+	});
+
+	// Load initial data (all time)
+	getTopListens("all");
+});

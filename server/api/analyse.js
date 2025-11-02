@@ -22,7 +22,14 @@ export async function analyseVideo(req, res) {
 			.prepare(`SELECT * FROM video WHERE id = ?`)
 			.get(videoId);
 
-		if (existingVideo && existingVideo.is_song) {
+		if (existingVideo) {
+			if (!existingVideo.is_song) {
+				return res.status(400).json({
+					message:
+						"Video is not a song and listening time will not be tracked.",
+				});
+			}
+
 			message = `Tracking listening time of ${existingVideo.title} 🎧`;
 			console.log(message);
 			return res.status(200).json({

@@ -96,5 +96,5 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 
 	// Load initial data (all time)
-	getTopListens("all");
+	getTopListens("day");
 });

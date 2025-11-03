@@ -7,19 +7,12 @@ const lmStudio = new OpenAI({
 	apiKey: "lm-studio", // LM Studio doesn't require a real API key
 });
 
-export async function analyzeWithLLM(
-	videoId,
-	info,
-	title,
-	channel,
-	description,
-	thumbnailUrl
-) {
+export async function analyzeWithLLM(title, channel, description, genre) {
 	// Prepare the prompt for the LLM
 	const prompt = `Analyze this YouTube video and determine if it's a song/music content.
   
   Video Title: ${title}
-  Other Info: ${info}
+  Genre: ${genre}
   Channel Name: ${channel}
   Description: ${description || "No description provided"}
   

@@ -105,11 +105,17 @@ async function onNewVideoLoaded() {
 	await new Promise((r) => setTimeout(r, 5000));
 
 	const videoId = getVideoId();
-	const info = document.querySelector("#info-container").innerText;
-	const title = document.title.replace(" - YouTube", "");
-	const channel =
-		document.querySelector("#owner")?.innerText.split("\n")[0] || "";
-	const description = await getDescription();
+	const {
+		author: channel,
+		// thumbnailUrl, // -- this gives the 1280x720 thumbmnail, but I want the 120x90 thumbnail
+		name: title,
+		description,
+		genre,
+	} = JSON.parse(
+		document.querySelector(
+			"#microformat > player-microformat-renderer > script"
+		).innerText
+	);
 	const durationString = document
 		.querySelector(".ytp-time-duration")
 		.innerText.split(":");
@@ -119,12 +125,12 @@ async function onNewVideoLoaded() {
 
 	const payload = {
 		title,
-		info,
 		channel,
 		description,
 		videoId,
 		thumbnailUrl: `https://img.youtube.com/vi/${videoId}/default.jpg`,
 		duration,
+		genre,
 	};
 
 	chrome.runtime.sendMessage(

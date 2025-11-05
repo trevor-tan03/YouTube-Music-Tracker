@@ -5,6 +5,10 @@ let totalListenMs = 0;
 let lastSentTime = 0;
 const SEND_INTERVAL_MS = 30000; // Send every 30 seconds
 
+function isAdPlaying() {
+	return Boolean(document.querySelector("div.ad-showing"));
+}
+
 function sendListeningData() {
 	if (!currentSessionId || totalListenMs === 0) return;
 
@@ -74,7 +78,7 @@ function trackPlayback() {
 	video.addEventListener("ended", endedHandler);
 
 	playbackInterval = setInterval(() => {
-		const nowPlaying = !video.paused && !video.ended;
+		const nowPlaying = !video.paused && !video.ended && !isAdPlaying();
 		if (nowPlaying && !isPlaying) {
 			startTime = Date.now();
 			isPlaying = true;
@@ -95,7 +99,6 @@ function trackPlayback() {
 			: totalListenMs;
 
 		if (currentTotal - lastSentTime >= SEND_INTERVAL_MS) {
-			console.log("30s has passed...");
 			// Update totalListenMs if currently playing
 			if (isPlaying) {
 				totalListenMs += Date.now() - startTime;

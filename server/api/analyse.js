@@ -43,17 +43,22 @@ export async function analyseVideo(req, res) {
 				});
 			}
 
+			// Create a new listening session for this existing song
+			const sessionId = createListeningSession(videoId);
 			message = `Tracking listening time of ${existingVideo.title} 🎧`;
 			console.log(message);
 			return res.status(200).json({
 				message,
+				sessionId, // Return the session ID
 			});
 		}
 
 		let result;
+		let isSong = false;
 
 		// 1. Check if the video is of a suitable genre
 		if (genre === "Music") {
+			isSong = true;
 			message = registerVideo(req.body, true);
 		} else if (genre === "Entertainment" || genre === "People & Blogs") {
 			// 2. If possible genre for music related video, check using LLM
@@ -65,11 +70,16 @@ export async function analyseVideo(req, res) {
 				description,
 				thumbnailUrl
 			);
-			message = registerVideo(req.body, result.isSong);
+			isSong = result.isSong;
+			message = registerVideo(req.body, isSong);
 		}
+
+		// Create listening session only if it's a song
+		const sessionId = isSong ? createListeningSession(videoId) : null;
 
 		return res.status(201).json({
 			message,
+			sessionId, // Return the session ID (or null if not a song)
 		});
 	} catch (err) {
 		console.error("Error in analyseVideo:", err);
@@ -84,4 +94,13 @@ function registerVideo(details, isSong) {
 	}a song.`;
 	console.log(message);
 	return message;
+}
+
+function createListeningSession(videoId) {
+	const result = db
+		.prepare(
+			"INSERT INTO listening_session (video_id, listening_time) VALUES (?, 0)"
+		)
+		.run(videoId);
+	return result.lastInsertRowid;
 }

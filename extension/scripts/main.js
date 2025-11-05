@@ -2,6 +2,55 @@ let playbackInterval = null;
 let isPlaying = false;
 let startTime = 0;
 let totalListenMs = 0;
+let lastSentTime = 0;
+const SEND_INTERVAL_MS = 30000; // Send every 30 seconds
+
+function sendListeningData() {
+	if (!currentSessionId || totalListenMs === 0) return;
+
+	const listeningTime = (totalListenMs / 1000).toFixed(1);
+	console.log(`📊 Sending listening update: ${listeningTime}s`);
+
+	try {
+		chrome.runtime.sendMessage(
+			{
+				type: "listen",
+				sessionId: currentSessionId,
+				listeningTime,
+			},
+			(response) => {
+				if (chrome.runtime.lastError) {
+					console.error(
+						"Extension context invalidated:",
+						chrome.runtime.lastError.message
+					);
+					// Stop trying to send messages
+					if (playbackInterval) {
+						clearInterval(playbackInterval);
+						playbackInterval = null;
+					}
+					return;
+				}
+				if (!response) {
+					console.error("No response from background script");
+					return;
+				}
+				if (!response.ok) {
+					console.error("Listening request failed:", response);
+				} else {
+					console.log(response.data);
+				}
+			}
+		);
+	} catch (error) {
+		console.error("Failed to send message:", error);
+		// Stop the interval to prevent repeated errors
+		if (playbackInterval) {
+			clearInterval(playbackInterval);
+			playbackInterval = null;
+		}
+	}
+}
 
 function trackPlayback() {
 	const video = document.querySelector("video");
@@ -10,6 +59,19 @@ function trackPlayback() {
 	isPlaying = false;
 	startTime = 0;
 	totalListenMs = 0;
+	lastSentTime = 0;
+
+	// Send data when video ends
+	const endedHandler = () => {
+		if (isPlaying) {
+			totalListenMs += Date.now() - startTime;
+			isPlaying = false;
+		}
+		if (totalListenMs > 0) {
+			sendListeningData();
+		}
+	};
+	video.addEventListener("ended", endedHandler);
 
 	playbackInterval = setInterval(() => {
 		const nowPlaying = !video.paused && !video.ended;
@@ -25,6 +87,23 @@ function trackPlayback() {
 				).toFixed(1)}s`
 			);
 		}
+
+		// Send data periodically during playback
+		// Calculate current total including ongoing playback
+		const currentTotal = isPlaying
+			? totalListenMs + (Date.now() - startTime)
+			: totalListenMs;
+
+		if (currentTotal - lastSentTime >= SEND_INTERVAL_MS) {
+			console.log("30s has passed...");
+			// Update totalListenMs if currently playing
+			if (isPlaying) {
+				totalListenMs += Date.now() - startTime;
+				startTime = Date.now(); // Reset start time
+			}
+			sendListeningData();
+			lastSentTime = totalListenMs;
+		}
 	}, 1000);
 }
 
@@ -39,25 +118,7 @@ async function stopTracking() {
 		`🛑 Stopped tracking video ${currentVideoId} — total listen time: ${listeningTime}s`
 	);
 
-	chrome.runtime.sendMessage(
-		{
-			type: "listen",
-			videoId: currentVideoId,
-			listeningTime,
-		},
-		(response) => {
-			if (!response) {
-				console.error("No response from background script");
-				return;
-			}
-			if (!response.ok) {
-				console.error("Listening request failed:", response);
-				return;
-			} else {
-				console.log(response.data);
-			}
-		}
-	);
+	sendListeningData();
 
 	if (playbackInterval) {
 		clearInterval(playbackInterval);
@@ -133,30 +194,49 @@ async function onNewVideoLoaded() {
 		genre,
 	};
 
-	chrome.runtime.sendMessage(
-		{
-			type: "analyse",
-			payload,
-		},
-		(response) => {
-			if (!response) {
-				console.error("No response from background script");
-				return;
+	try {
+		chrome.runtime.sendMessage(
+			{
+				type: "analyse",
+				payload,
+			},
+			(response) => {
+				if (chrome.runtime.lastError) {
+					console.error(
+						"Extension context invalidated:",
+						chrome.runtime.lastError.message
+					);
+					return;
+				}
+				if (!response) {
+					console.error("No response from background script");
+					return;
+				}
+				if (!response.ok) {
+					console.error("Classification request failed:", response);
+					return;
+				} else {
+					console.log(response.data);
+					// Store the session ID if provided
+					if (response.data && response.data.sessionId) {
+						currentSessionId = response.data.sessionId;
+						console.log(`Session ID: ${currentSessionId}`);
+					} else {
+						currentSessionId = null;
+					}
+				}
 			}
-			if (!response.ok) {
-				console.error("Classification request failed:", response);
-				return;
-			} else {
-				console.log(response.data);
-			}
-		}
-	);
+		);
+	} catch (error) {
+		console.error("Failed to send analyse message:", error);
+	}
 
 	// Start checking playback or getting song info
 	trackPlayback();
 }
 
 let currentVideoId;
+let currentSessionId = null;
 let timeoutId;
 
 window.addEventListener("yt-navigate-finish", async () => {
@@ -169,6 +249,19 @@ window.addEventListener("yt-navigate-finish", async () => {
 	}
 });
 
+// Use visibilitychange instead of beforeunload (more reliable)
+document.addEventListener("visibilitychange", () => {
+	if (document.hidden && totalListenMs > 0) {
+		// Tab is being hidden - send data now
+		if (isPlaying) {
+			totalListenMs += Date.now() - startTime;
+			isPlaying = false;
+		}
+		sendListeningData();
+	}
+});
+
+// Keep beforeunload as backup
 window.addEventListener("beforeunload", (e) => {
 	if (isPlaying) {
 		totalListenMs += Date.now() - startTime;
@@ -182,9 +275,13 @@ window.addEventListener("beforeunload", (e) => {
 	);
 	if (!currentVideoId || totalListenMs === 0) return;
 
-	chrome.runtime.sendMessage({
-		type: "listen",
-		videoId: currentVideoId,
-		listeningTime: (totalListenMs / 1000).toFixed(1),
-	});
+	try {
+		chrome.runtime.sendMessage({
+			type: "listen",
+			sessionId: currentSessionId,
+			listeningTime: (totalListenMs / 1000).toFixed(1),
+		});
+	} catch (error) {
+		console.error("Failed to send beforeunload message:", error);
+	}
 });

@@ -39,7 +39,10 @@ function createTrackElement(listen, index) {
     `;
 
 	trackItem.addEventListener("click", () => {
-		window.open(`https://www.youtube.com/watch?v=${listen.id}`, "_blank");
+		window.open(
+			`https://www.youtube.com/watch?v=${listen.video_id}`,
+			"_blank"
+		);
 	});
 
 	return trackItem;

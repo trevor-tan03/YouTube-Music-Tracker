@@ -40,6 +40,7 @@ export async function analyseVideo(req, res) {
 				console.log(message);
 				return res.status(400).json({
 					message,
+					isSong: existingVideo.is_song,
 				});
 			}
 
@@ -50,6 +51,7 @@ export async function analyseVideo(req, res) {
 			return res.status(200).json({
 				message,
 				sessionId, // Return the session ID
+				isSong: existingVideo.is_song,
 			});
 		}
 
@@ -80,6 +82,7 @@ export async function analyseVideo(req, res) {
 		return res.status(201).json({
 			message,
 			sessionId, // Return the session ID (or null if not a song)
+			isSong,
 		});
 	} catch (err) {
 		console.error("Error in analyseVideo:", err);

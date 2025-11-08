@@ -19,10 +19,11 @@ export async function getTopListensInPeriod(period) {
 		v.channel,
 		v.duration,
 		v.thumbnail_url,
+        v.is_song,
 		SUM(ls.listening_time) as total_listening_time
 	FROM listening_session ls
 	JOIN video v ON ls.video_id = v.id
-	WHERE 1=1
+	WHERE 1=1 AND v.is_song = 1
 `;
 
 	switch (period) {

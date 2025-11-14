@@ -82,6 +82,13 @@ function getTopListens(period = "all") {
 document.addEventListener("DOMContentLoaded", () => {
 	const tabs = document.querySelectorAll(".tab");
 
+	// Open dashboard button
+	document.getElementById("open-dashboard").addEventListener("click", () => {
+		chrome.tabs.create({
+			url: chrome.runtime.getURL("dashboard.html"),
+		});
+	});
+
 	tabs.forEach((tab) => {
 		tab.addEventListener("click", () => {
 			// Remove active class from all tabs

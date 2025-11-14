@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>YouTube Music Tracker - Dashboard</title>
+		<link rel="stylesheet" href="styles/dashboard.css" />
+	</head>
+	<body>
+		<div class="container">
+			<header class="header">
+				<h1>🎵 YouTube Music Tracker</h1>
+				<p class="subtitle">
+					Track and manage your YouTube listening habits
+				</p>
+			</header>
+
+			<!-- Main Navigation Tabs -->
+			<nav class="main-tabs">
+				<button class="main-tab active" data-view="top-tracks">
+					<span class="icon">🏆</span>
+					<span>Top Tracks</span>
+				</button>
+				<button class="main-tab" data-view="all-videos">
+					<span class="icon">📹</span>
+					<span>All Videos</span>
+				</button>
+				<button class="main-tab" data-view="stats">
+					<span class="icon">📊</span>
+					<span>Statistics</span>
+				</button>
+			</nav>
+
+			<!-- Top Tracks View -->
+			<section id="top-tracks-view" class="view active">
+				<div class="view-header">
+					<h2>Your Most Listened Tracks</h2>
+					<div class="period-tabs">
+						<button class="period-tab active" data-period="day">
+							Today
+						</button>
+						<button class="period-tab" data-period="week">
+							This Week
+						</button>
+						<button class="period-tab" data-period="month">
+							This Month
+						</button>
+						<button class="period-tab" data-period="year">
+							This Year
+						</button>
+						<button class="period-tab" data-period="all">
+							All Time
+						</button>
+					</div>
+				</div>
+
+				<div class="content-area">
+					<div id="tracks-container" class="tracks-grid">
+						<div class="loading">Loading your top tracks...</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- All Videos View -->
+			<section id="all-videos-view" class="view">
+				<div class="view-header">
+					<h2>All Tracked Videos</h2>
+
+					<div class="controls">
+						<div class="search-bar">
+							<input
+								type="text"
+								id="search-input"
+								placeholder="Search by title or channel..."
+							/>
+						</div>
+
+						<div class="filter-group">
+							<button class="filter-btn active" data-filter="all">
+								All <span class="count" id="count-all">0</span>
+							</button>
+							<button class="filter-btn" data-filter="songs">
+								🎵 Songs
+								<span class="count" id="count-songs">0</span>
+							</button>
+							<button class="filter-btn" data-filter="videos">
+								📹 Videos
+								<span class="count" id="count-videos">0</span>
+							</button>
+							<button class="filter-btn" data-filter="unknown">
+								❓ Unknown
+								<span class="count" id="count-unknown">0</span>
+							</button>
+						</div>
+
+						<div class="sort-group">
+							<label for="sort-by">Sort by:</label>
+							<select id="sort-by">
+								<option value="recent">Most Recent</option>
+								<option value="oldest">Oldest First</option>
+								<option value="most-played">Most Played</option>
+								<option value="duration-desc">
+									Longest Duration
+								</option>
+								<option value="duration-asc">
+									Shortest Duration
+								</option>
+								<option value="title">Title (A-Z)</option>
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<div class="content-area">
+					<div id="videos-container" class="videos-list">
+						<div class="loading">Loading videos...</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Statistics View -->
+			<section id="stats-view" class="view">
+				<div class="view-header">
+					<h2>Your Listening Statistics</h2>
+				</div>
+
+				<div class="content-area">
+					<div class="stats-grid">
+						<div class="stat-card">
+							<div class="stat-icon">🎵</div>
+							<div class="stat-value" id="stat-total-songs">
+								-
+							</div>
+							<div class="stat-label">Total Songs</div>
+						</div>
+
+						<div class="stat-card">
+							<div class="stat-icon">⏱️</div>
+							<div class="stat-value" id="stat-listening-time">
+								-
+							</div>
+							<div class="stat-label">Listening Time</div>
+						</div>
+
+						<div class="stat-card">
+							<div class="stat-icon">▶️</div>
+							<div class="stat-value" id="stat-total-plays">
+								-
+							</div>
+							<div class="stat-label">Total Plays</div>
+						</div>
+
+						<div class="stat-card">
+							<div class="stat-icon">📹</div>
+							<div class="stat-value" id="stat-total-videos">
+								-
+							</div>
+							<div class="stat-label">Total Videos</div>
+						</div>
+					</div>
+
+					<div class="loading" id="stats-loading">
+						Loading statistics...
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<script src="scripts/dashboard.js"></script>
+	</body>
+</html>

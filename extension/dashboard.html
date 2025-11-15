@@ -4,11 +4,11 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>YouTube Music Tracker - Dashboard</title>
-		<link rel="stylesheet" href="styles/dashboard.css" />
+		<link rel="stylesheet" href="./styles/dashboard.css" />
 	</head>
-	<body>
-		<div class="container">
-			<header class="header">
+	<body class="dashboard-page">
+		<div class="dashboard-container">
+			<header class="dashboard-header">
 				<h1>🎵 YouTube Music Tracker</h1>
 				<p class="subtitle">
 					Track and manage your YouTube listening habits
@@ -16,57 +16,55 @@
 			</header>
 
 			<!-- Main Navigation Tabs -->
-			<nav class="main-tabs">
-				<button class="main-tab active" data-view="top-tracks">
+			<nav class="dashboard-nav">
+				<button class="dashboard-tab active" data-view="top-tracks">
 					<span class="icon">🏆</span>
 					<span>Top Tracks</span>
 				</button>
-				<button class="main-tab" data-view="all-videos">
+				<button class="dashboard-tab" data-view="all-videos">
 					<span class="icon">📹</span>
 					<span>All Videos</span>
 				</button>
-				<button class="main-tab" data-view="stats">
+				<button class="dashboard-tab" data-view="stats">
 					<span class="icon">📊</span>
 					<span>Statistics</span>
 				</button>
 			</nav>
 
 			<!-- Top Tracks View -->
-			<section id="top-tracks-view" class="view active">
-				<div class="view-header">
-					<h2>Your Most Listened Tracks</h2>
-					<div class="period-tabs">
-						<button class="period-tab active" data-period="day">
+			<section id="top-tracks-view" class="dashboard-view active">
+				<div class="view-section">
+					<h2 class="section-title">Your Most Listened Tracks</h2>
+					<div class="tabs">
+						<button class="tab active" data-period="day">
 							Today
 						</button>
-						<button class="period-tab" data-period="week">
+						<button class="tab" data-period="week">
 							This Week
 						</button>
-						<button class="period-tab" data-period="month">
+						<button class="tab" data-period="month">
 							This Month
 						</button>
-						<button class="period-tab" data-period="year">
+						<button class="tab" data-period="year">
 							This Year
 						</button>
-						<button class="period-tab" data-period="all">
-							All Time
-						</button>
+						<button class="tab" data-period="all">All Time</button>
 					</div>
 				</div>
 
-				<div class="content-area">
-					<div id="tracks-container" class="tracks-grid">
+				<div class="dashboard-content">
+					<div id="tracks-container" class="dashboard-tracks-grid">
 						<div class="loading">Loading your top tracks...</div>
 					</div>
 				</div>
 			</section>
 
 			<!-- All Videos View -->
-			<section id="all-videos-view" class="view">
-				<div class="view-header">
-					<h2>All Tracked Videos</h2>
+			<section id="all-videos-view" class="dashboard-view">
+				<div class="view-section">
+					<h2 class="section-title">All Tracked Videos</h2>
 
-					<div class="controls">
+					<div class="dashboard-controls">
 						<div class="search-bar">
 							<input
 								type="text"
@@ -76,18 +74,24 @@
 						</div>
 
 						<div class="filter-group">
-							<button class="filter-btn active" data-filter="all">
+							<button
+								class="filter-btn tab active"
+								data-filter="all"
+							>
 								All <span class="count" id="count-all">0</span>
 							</button>
-							<button class="filter-btn" data-filter="songs">
+							<button class="filter-btn tab" data-filter="songs">
 								🎵 Songs
 								<span class="count" id="count-songs">0</span>
 							</button>
-							<button class="filter-btn" data-filter="videos">
+							<button class="filter-btn tab" data-filter="videos">
 								📹 Videos
 								<span class="count" id="count-videos">0</span>
 							</button>
-							<button class="filter-btn" data-filter="unknown">
+							<button
+								class="filter-btn tab"
+								data-filter="unknown"
+							>
 								❓ Unknown
 								<span class="count" id="count-unknown">0</span>
 							</button>
@@ -111,20 +115,20 @@
 					</div>
 				</div>
 
-				<div class="content-area">
-					<div id="videos-container" class="videos-list">
+				<div class="dashboard-content">
+					<div id="videos-container" class="dashboard-videos-list">
 						<div class="loading">Loading videos...</div>
 					</div>
 				</div>
 			</section>
 
 			<!-- Statistics View -->
-			<section id="stats-view" class="view">
-				<div class="view-header">
-					<h2>Your Listening Statistics</h2>
+			<section id="stats-view" class="dashboard-view">
+				<div class="view-section">
+					<h2 class="section-title">Your Listening Statistics</h2>
 				</div>
 
-				<div class="content-area">
+				<div class="dashboard-content">
 					<div class="stats-grid">
 						<div class="stat-card">
 							<div class="stat-icon">🎵</div>

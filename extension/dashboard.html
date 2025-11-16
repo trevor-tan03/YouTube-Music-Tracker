@@ -15,7 +15,6 @@
 				</p>
 			</header>
 
-			<!-- Main Navigation Tabs -->
 			<nav class="dashboard-nav">
 				<button class="dashboard-tab active" data-view="top-tracks">
 					<span class="icon">🏆</span>
@@ -87,13 +86,6 @@
 							<button class="filter-btn tab" data-filter="videos">
 								📹 Videos
 								<span class="count" id="count-videos">0</span>
-							</button>
-							<button
-								class="filter-btn tab"
-								data-filter="unknown"
-							>
-								❓ Unknown
-								<span class="count" id="count-unknown">0</span>
 							</button>
 						</div>
 
@@ -168,6 +160,64 @@
 					</div>
 				</div>
 			</section>
+		</div>
+
+		<!-- Classification Modal -->
+		<div id="classification-modal" class="modal-overlay">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title">Classify Video</h2>
+					<p class="modal-video-title" id="modal-video-title"></p>
+				</div>
+
+				<div class="classification-options">
+					<label class="classification-option">
+						<input
+							type="radio"
+							name="classification"
+							value="true"
+						/>
+						<div class="option-content">
+							<div class="option-label">
+								<span>🎵</span>
+								<span>Song</span>
+							</div>
+							<div class="option-description">
+								Music videos, audio tracks, and songs
+							</div>
+						</div>
+					</label>
+
+					<label class="classification-option">
+						<input
+							type="radio"
+							name="classification"
+							value="false"
+						/>
+						<div class="option-content">
+							<div class="option-label">
+								<span>📹</span>
+								<span>Video</span>
+							</div>
+							<div class="option-description">
+								Non-music content, vlogs, tutorials, etc.
+							</div>
+						</div>
+					</label>
+				</div>
+
+				<div class="modal-actions">
+					<button
+						class="modal-btn modal-btn-cancel"
+						id="modal-cancel"
+					>
+						Cancel
+					</button>
+					<button class="modal-btn modal-btn-save" id="modal-save">
+						Save Classification
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<script src="scripts/dashboard.js"></script>

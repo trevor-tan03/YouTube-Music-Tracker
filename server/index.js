@@ -4,6 +4,7 @@ import { analyseVideo } from "./api/analyse.js";
 import { classifySong } from "./api/classify.js";
 import { addSongListeningTime } from "./api/listen.js";
 import { getTopListens } from "./api/top-listens.js";
+import { getVideos } from "./api/videos.js";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use("/listen", addSongListeningTime);
 app.use("/analyse", analyseVideo);
 app.use("/top-listens", getTopListens);
 app.use("/classify", classifySong);
+app.use("/videos", getVideos);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -1,10 +1,16 @@
-// State
 let currentView = "top-tracks";
 let currentPeriod = "day";
 let currentFilter = "all";
 let currentSort = "recent";
 let allVideos = [];
 let filteredVideos = [];
+let currentClassifyingVideoId = null;
+let isLoadingMore = false;
+let hasMoreVideos = true;
+let currentOffset = 0;
+const VIDEOS_PER_PAGE = 50;
+let scrollObserver = null;
+let videosContainer = null;
 
 const API_ENDPOINT = "http://localhost:3000";
 
@@ -15,8 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	setupFilters();
 	setupSearch();
 	setupSort();
-
-	// Load initial data based on current view
+	setupModal();
+	//setupScrollObserver();
+	setupInfiniteScroll();
 	loadTopTracks();
 });
 
@@ -33,18 +40,13 @@ function setupMainTabs() {
 
 function switchView(view) {
 	currentView = view;
-
-	// Update tab styles
 	document.querySelectorAll(".dashboard-tab").forEach((tab) => {
 		tab.classList.toggle("active", tab.dataset.view === view);
 	});
-
-	// Update view visibility
 	document.querySelectorAll(".dashboard-view").forEach((v) => {
 		v.classList.toggle("active", v.id === `${view}-view`);
 	});
 
-	// Load data for the view
 	if (view === "top-tracks") {
 		loadTopTracks();
 	} else if (view === "all-videos") {
@@ -60,13 +62,10 @@ function setupPeriodTabs() {
 	tabs.forEach((tab) => {
 		tab.addEventListener("click", () => {
 			currentPeriod = tab.dataset.period;
-
-			// Update active state
 			document
 				.querySelectorAll(".tab[data-period]")
 				.forEach((t) => t.classList.remove("active"));
 			tab.classList.add("active");
-
 			loadTopTracks();
 		});
 	});
@@ -78,11 +77,8 @@ function setupFilters() {
 	filters.forEach((btn) => {
 		btn.addEventListener("click", () => {
 			currentFilter = btn.dataset.filter;
-
-			// Update active state
 			filters.forEach((f) => f.classList.remove("active"));
 			btn.classList.add("active");
-
 			applyFiltersAndSort();
 		});
 	});
@@ -113,6 +109,116 @@ function setupSort() {
 	});
 }
 
+// Setup Modal
+function setupModal() {
+	const modal = document.getElementById("classification-modal");
+	const cancelBtn = document.getElementById("modal-cancel");
+	const saveBtn = document.getElementById("modal-save");
+
+	cancelBtn.addEventListener("click", () => {
+		closeModal();
+	});
+
+	saveBtn.addEventListener("click", () => {
+		saveClassification();
+	});
+
+	modal.addEventListener("click", (e) => {
+		if (e.target === modal) {
+			closeModal();
+		}
+	});
+}
+
+function openModal(videoId, videoTitle, currentState) {
+	currentClassifyingVideoId = videoId;
+	const modal = document.getElementById("classification-modal");
+	const titleElement = document.getElementById("modal-video-title");
+
+	titleElement.textContent = videoTitle;
+
+	// Set the current classification state
+	const radioButtons = document.querySelectorAll(
+		'input[name="classification"]'
+	);
+
+	radioButtons.forEach((radio) => {
+		if (currentState === null) {
+			radio.checked = radio.value === "null";
+		} else {
+			radio.checked = radio.value === String(currentState);
+		}
+	});
+
+	modal.classList.add("active");
+}
+
+function closeModal() {
+	const modal = document.getElementById("classification-modal");
+	modal.classList.remove("active");
+	currentClassifyingVideoId = null;
+}
+
+async function saveClassification() {
+	const selectedRadio = document.querySelector(
+		'input[name="classification"]:checked'
+	);
+
+	if (!selectedRadio) {
+		alert("Please select a classification");
+		return;
+	}
+
+	const isSongValue =
+		selectedRadio.value === "null" ? null : selectedRadio.value === "true";
+
+	const saveBtn = document.getElementById("modal-save");
+	saveBtn.disabled = true;
+	saveBtn.textContent = "Saving...";
+
+	try {
+		const response = await fetch(`${API_ENDPOINT}/classify`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				videoId: currentClassifyingVideoId,
+				isSong: isSongValue,
+			}),
+		});
+
+		if (!response.ok) {
+			throw new Error("Classification failed");
+		}
+
+		// Update local data
+		const video = allVideos.find(
+			(v) => v.videoId === currentClassifyingVideoId
+		);
+		if (video) {
+			video.isSong = isSongValue;
+		}
+
+		// Update UI
+		updateCounts();
+		applyFiltersAndSort();
+
+		// Reload top tracks if we're on that view
+		if (currentView === "top-tracks") {
+			loadTopTracks();
+		}
+
+		closeModal();
+	} catch (error) {
+		console.error("Error classifying video:", error);
+		alert("Failed to update classification. Please try again.");
+	} finally {
+		saveBtn.disabled = false;
+		saveBtn.textContent = "Save Classification";
+	}
+}
+
 // Load top tracks
 async function loadTopTracks() {
 	const container = document.getElementById("tracks-container");
@@ -139,30 +245,57 @@ async function loadTopTracks() {
 		container.innerHTML = tracks
 			.map(
 				(track, index) => `
-			<div class="dashboard-track-card" data-video-id="${track.video_id}">
-				<div class="dashboard-track-rank">#${index + 1}</div>
-				<img 
-					src="${`https://i.ytimg.com/vi/${track.video_id}/maxresdefault.jpg`}" 
-					alt="${escapeHtml(track.title)}"
-					class="dashboard-track-thumbnail"
+            <div class="dashboard-track-card">
+                <div class="dashboard-track-rank">#${index + 1}</div>
+                <img 
+                    src="${`https://i.ytimg.com/vi/${track.video_id}/maxresdefault.jpg`}" 
+                    alt="${escapeHtml(track.title)}"
+                    class="dashboard-track-thumbnail"
                     loading="lazy"
-				/>
-				<div class="dashboard-track-title">${escapeHtml(track.title)}</div>
-				<div class="dashboard-track-channel">${escapeHtml(track.channel)}</div>
-				<div class="dashboard-track-stats">
-					<span>⏱️ ${formatTime(track.total_listening_time)}</span>
-					<span>▶️ ${Math.round(track.total_listening_time / track.duration)} plays</span>
-				</div>
-			</div>
-		`
+                    data-video-id="${track.video_id}"
+                    style="cursor: pointer;"
+                />
+                <div class="dashboard-track-title">${escapeHtml(
+					track.title
+				)}</div>
+                <div class="dashboard-track-channel">${escapeHtml(
+					track.channel
+				)}</div>
+                <div class="dashboard-track-stats">
+                    <span>⏱️ ${formatTime(track.total_listening_time)}</span>
+                    <span>▶️ ${Math.round(
+						track.total_listening_time / track.duration
+					)} plays</span>
+                    <button class="setting-btn" data-video-id="${
+						track.video_id
+					}" data-title="${escapeHtml(track.title)}" data-is-song="${
+					track.is_song
+				}">⚙️</button>
+                </div>
+            </div>
+        `
 			)
 			.join("");
 
-		// Add click handlers
-		container.querySelectorAll(".dashboard-track-card").forEach((card) => {
-			card.addEventListener("click", () => {
-				const videoId = card.dataset.videoId;
-				openYouTubeVideo(videoId);
+		// Add click handlers for thumbnails
+		container
+			.querySelectorAll(".dashboard-track-thumbnail")
+			.forEach((thumb) => {
+				thumb.addEventListener("click", (e) => {
+					e.stopPropagation();
+					const videoId = thumb.dataset.videoId;
+					openYouTubeVideo(videoId);
+				});
+			});
+
+		// Add click handlers for settings buttons
+		container.querySelectorAll(".setting-btn").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const videoId = btn.dataset.videoId;
+				const title = btn.dataset.title;
+				const isSong = Boolean(Number(btn.dataset.isSong));
+				openModal(videoId, title, isSong);
 			});
 		});
 	} catch (error) {
@@ -172,21 +305,58 @@ async function loadTopTracks() {
 	}
 }
 
-// Load all videos
+// Setup Infinite Scroll
+function setupInfiniteScroll() {
+	videosContainer = document.getElementById("videos-container");
+
+	const observer = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (
+					entry.isIntersecting &&
+					!isLoadingMore &&
+					hasMoreVideos &&
+					currentView === "all-videos"
+				) {
+					loadMoreVideos();
+					console.log("JQWEJQWIOEJOQWEJK");
+				}
+			});
+		},
+		{
+			rootMargin: "20px",
+		}
+	);
+
+	const sentinel = addSentinelToDOM();
+	observer.observe(sentinel);
+}
+
+function addSentinelToDOM() {
+	let sentinel = document.getElementById("#scroll-sentinel");
+
+	if (!sentinel) {
+		sentinel = document.createElement("div");
+		sentinel.id = "scroll-sentinel";
+		sentinel.style.height = "1px";
+		videosContainer.appendChild(sentinel);
+	}
+
+	return sentinel;
+}
+
+// Load all videos (initial load)
 async function loadAllVideos() {
 	const container = document.getElementById("videos-container");
 	container.innerHTML = '<div class="loading">Loading videos...</div>';
 
+	// Reset pagination
+	allVideos = [];
+	currentOffset = 0;
+	hasMoreVideos = true;
+
 	try {
-		const response = await fetch(`${API_ENDPOINT}/videos`);
-
-		if (!response.ok) {
-			throw new Error("Failed to load videos");
-		}
-
-		allVideos = await response.json();
-		updateCounts();
-		applyFiltersAndSort();
+		await fetchVideos(true);
 	} catch (error) {
 		console.error("Error loading videos:", error);
 		container.innerHTML =
@@ -194,143 +364,234 @@ async function loadAllVideos() {
 	}
 }
 
-// Update filter counts
-function updateCounts() {
-	const counts = {
-		all: allVideos.length,
-		songs: allVideos.filter((v) => v.isSong === true).length,
-		videos: allVideos.filter((v) => v.isSong === false).length,
-		unknown: allVideos.filter(
-			(v) => v.isSong === null || v.isSong === undefined
-		).length,
-	};
+// Load more videos (infinite scroll)
+async function loadMoreVideos() {
+	if (isLoadingMore || !hasMoreVideos) return;
 
-	document.getElementById("count-all").textContent = counts.all;
-	document.getElementById("count-songs").textContent = counts.songs;
-	document.getElementById("count-videos").textContent = counts.videos;
-	document.getElementById("count-unknown").textContent = counts.unknown;
+	isLoadingMore = true;
+	const container = document.getElementById("videos-container");
+
+	// Add loading indicator
+	let loadingIndicator = document.getElementById("loading-more");
+	if (!loadingIndicator) {
+		loadingIndicator = document.createElement("div");
+		loadingIndicator.id = "loading-more";
+		loadingIndicator.className = "loading";
+		loadingIndicator.textContent = "Loading more videos...";
+		loadingIndicator.style.padding = "20px";
+		container.appendChild(loadingIndicator);
+	}
+
+	try {
+		await fetchVideos(false);
+	} catch (error) {
+		console.error("Error loading more videos:", error);
+	} finally {
+		isLoadingMore = false;
+		if (loadingIndicator) {
+			loadingIndicator.remove();
+		}
+	}
 }
 
-// Apply filters and sort
-function applyFiltersAndSort() {
+// Fetch videos from API
+async function fetchVideos(isInitial) {
 	const searchInput = document.getElementById("search-input");
-	const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+	const searchTerm = searchInput ? searchInput.value : "";
 
-	// Filter
-	filteredVideos = allVideos.filter((video) => {
-		// Search filter
-		const matchesSearch =
-			!searchTerm ||
-			video.title.toLowerCase().includes(searchTerm) ||
-			video.channel.toLowerCase().includes(searchTerm);
+	// Map filter to classification param
+	let classificationParam = "";
+	if (currentFilter === "songs") {
+		classificationParam = "song";
+	} else if (currentFilter === "videos") {
+		classificationParam = "video";
+	}
 
-		if (!matchesSearch) return false;
-
-		// Type filter
-		if (currentFilter === "songs") {
-			return video.isSong === true;
-		} else if (currentFilter === "videos") {
-			return video.isSong === false;
-		} else if (currentFilter === "unknown") {
-			return video.isSong === null || video.isSong === undefined;
-		}
-
-		return true; // 'all' filter
+	const params = new URLSearchParams({
+		limit: VIDEOS_PER_PAGE.toString(),
+		offset: currentOffset.toString(),
+		sortBy: currentSort,
 	});
 
-	// Sort
-	filteredVideos.sort((a, b) => {
-		switch (currentSort) {
-			case "recent":
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			case "oldest":
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			case "most-played":
-				return (b.playCount || 0) - (a.playCount || 0);
-			case "duration-desc":
-				return b.duration - a.duration;
-			case "duration-asc":
-				return a.duration - b.duration;
-			case "title":
-				return a.title.localeCompare(b.title);
-			default:
-				return 0;
-		}
-	});
+	if (searchTerm) {
+		params.append("search", searchTerm);
+	}
+	if (classificationParam) {
+		params.append("classification", classificationParam);
+	}
 
+	const response = await fetch(`${API_ENDPOINT}/videos?${params.toString()}`);
+
+	if (!response.ok) {
+		throw new Error("Failed to load videos");
+	}
+
+	const data = await response.json();
+
+	if (isInitial) {
+		allVideos = data.videos;
+	} else {
+		allVideos = [...allVideos, ...data.videos];
+	}
+
+	hasMoreVideos = data.pagination.hasMore;
+	currentOffset = data.pagination.nextOffset || currentOffset;
+
+	updateCounts();
 	renderVideos();
+}
+
+// Update filter counts (now fetches from API)
+async function updateCounts() {
+	try {
+		// Fetch counts for each filter
+		const [allRes, songsRes, videosRes] = await Promise.all([
+			fetch(`${API_ENDPOINT}/videos?limit=1&offset=0`),
+			fetch(
+				`${API_ENDPOINT}/videos?limit=1&offset=0&classification=song`
+			),
+			fetch(
+				`${API_ENDPOINT}/videos?limit=1&offset=0&classification=video`
+			),
+		]);
+
+		const [allData, songsData, videosData] = await Promise.all([
+			allRes.json(),
+			songsRes.json(),
+			videosRes.json(),
+		]);
+
+		document.getElementById("count-all").textContent =
+			allData.pagination.total;
+		document.getElementById("count-songs").textContent =
+			songsData.pagination.total;
+		document.getElementById("count-videos").textContent =
+			videosData.pagination.total;
+	} catch (error) {
+		console.error("Error updating counts:", error);
+	}
+}
+
+// Apply filters and sort (now reloads from API)
+function applyFiltersAndSort() {
+	// Reset and reload from API
+	currentOffset = 0;
+	hasMoreVideos = true;
+	allVideos = [];
+
+	const container = document.getElementById("videos-container");
+	container.innerHTML = '<div class="loading">Loading videos...</div>';
+
+	fetchVideos(true);
+}
+
+// Setup persistent scroll observer
+function setupScrollObserver() {
+	videosContainer = document.getElementById("videos-container");
+
+	scrollObserver = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting && currentView === "all-videos") {
+					console.log("Sentinel visible, loading more...");
+					loadMoreVideos();
+				}
+			});
+		},
+		{
+			root: null,
+			rootMargin: "20px",
+			threshold: 0.1,
+		}
+	);
+
+	const sentinel = addSentinelToDOM();
+	scrollObserver.observe(sentinel);
+}
+
+// Observe the sentinel element
+function observeSentinel() {
+	const sentinel = document.getElementById("loading-sentinel");
+	if (sentinel && scrollObserver) {
+		scrollObserver.observe(sentinel);
+		console.log("Observing sentinel");
+	}
 }
 
 // Render videos
 function renderVideos() {
 	const container = document.getElementById("videos-container");
 
-	if (filteredVideos.length === 0) {
+	// Keep the sentinel element
+	// const sentinel = document.getElementById("scroll-sentinel");
+
+	if (!allVideos || allVideos.length === 0) {
 		container.innerHTML = '<div class="empty-state">No videos found</div>';
 		return;
 	}
 
-	container.innerHTML = filteredVideos
+	const videosHTML = allVideos
 		.map((video) => {
-			const typeEmoji =
-				video.isSong === true
-					? "🎵"
-					: video.isSong === false
-					? "📹"
-					: "❓";
-			const typeLabel =
-				video.isSong === true
-					? "Song"
-					: video.isSong === false
-					? "Video"
-					: "Unknown";
-			const btnClass =
-				video.isSong === true
-					? "song"
-					: video.isSong === false
-					? "video"
-					: "";
-			const btnText =
-				video.isSong === true
-					? "✓ Song"
-					: video.isSong === false
-					? "✓ Video"
-					: "Classify";
+			const typeEmoji = video.is_song ? "🎵" : "📹";
+			const typeLabel = video.is_song ? "Song" : "Video";
 
 			return `
-			<div class="dashboard-video-card">
-				<div class="video-type-badge" title="${typeLabel}">${typeEmoji}</div>
-				<img 
-					src="${video.thumbnailUrl}" 
-					alt="${escapeHtml(video.title)}"
-					class="dashboard-video-thumbnail"
-					data-video-id="${video.videoId}"
-				/>
-				<div class="dashboard-video-info">
-					<div class="dashboard-video-title" data-video-id="${video.videoId}">
-						${escapeHtml(video.title)}
-					</div>
-					<div class="dashboard-video-channel">${escapeHtml(video.channel)}</div>
-					<div class="dashboard-video-meta">
-						<span>⏱️ ${formatDuration(video.duration)}</span>
-						${video.genre ? `<span>🎭 ${escapeHtml(video.genre)}</span>` : ""}
-						${video.playCount ? `<span>▶️ ${video.playCount} plays</span>` : ""}
-						<span>📅 ${formatDate(video.createdAt)}</span>
-					</div>
-				</div>
-				<div class="dashboard-video-actions">
-					<button 
-						class="classify-btn ${btnClass}"
-						data-video-id="${video.videoId}"
-						data-current-state="${video.isSong}"
-					>
-						${btnText}
-					</button>
-				</div>
-			</div>
-		`;
+            <div class="dashboard-video-card">
+                <div class="video-type-badge" title="${typeLabel}">${typeEmoji}</div>
+                <img 
+                    src="${video.thumbnail_url}" 
+                    alt="${escapeHtml(video.title)}"
+                    class="dashboard-video-thumbnail"
+                    data-video-id="${video.id}"
+                />
+                <div class="dashboard-video-info">
+                    <div class="dashboard-video-title" data-video-id="${
+						video.id
+					}">
+                        ${escapeHtml(video.title)}
+                    </div>
+                    <div class="dashboard-video-channel">${escapeHtml(
+						video.channel
+					)}</div>
+                    <div class="dashboard-video-meta">
+                        <span>⏱️ ${formatDuration(video.duration)}</span>
+                        <span>▶️ ${Math.round(
+							video.listening_time / video.duration
+						)} plays</span>
+                        <span>📅 ${formatDate(video.createdAt)}</span>
+                    </div>
+                </div>
+                <div class="dashboard-video-actions">
+                    <button 
+                        class="classify-btn"
+                        data-video-id="${video.id}"
+                        data-video-title="${escapeHtml(video.title)}"
+                        data-current-state="${video.is_song}"
+                    >
+                        🏷️ Classify
+                    </button>
+                </div>
+            </div>
+        `;
 		})
 		.join("");
+
+	// Add loading indicator at the bottom if there are more videos
+	const loadingIndicator = hasMoreVideos
+		? '<div id="loading-sentinel" style="height: 100px; display: flex; align-items: center; justify-content: center; color: #d8dee9; opacity: 0.6;">Scroll for more...</div>'
+		: '<div style="text-align: center; padding: 20px; color: #d8dee9; opacity: 0.6;">No more videos</div>';
+
+	container.innerHTML = videosHTML;
+
+	setupInfiniteScroll();
+
+	// Re-attach observer to the new sentinel
+	if (hasMoreVideos) {
+		// Use setTimeout to ensure DOM is updated
+		setTimeout(() => {
+			observeSentinel();
+		}, 0);
+	}
 
 	// Add click handlers for thumbnails and titles
 	container
@@ -345,83 +606,14 @@ function renderVideos() {
 
 	// Add click handlers for classify buttons
 	container.querySelectorAll(".classify-btn").forEach((btn) => {
-		btn.addEventListener("click", async (e) => {
+		btn.addEventListener("click", (e) => {
 			e.stopPropagation();
 			const videoId = btn.dataset.videoId;
-			const currentState =
-				btn.dataset.currentState === "true"
-					? true
-					: btn.dataset.currentState === "false"
-					? false
-					: null;
-
-			await classifyVideo(videoId, currentState, btn);
+			const title = btn.dataset.title;
+			const isSong = Boolean(Number(btn.dataset.currentState));
+			openModal(videoId, title, isSong);
 		});
 	});
-}
-
-// Classify video
-async function classifyVideo(videoId, currentState, button) {
-	// Determine new state (cycle through: null -> true -> false -> null)
-	let newState;
-	if (currentState === null) {
-		newState = true; // Unknown -> Song
-	} else if (currentState === true) {
-		newState = false; // Song -> Video
-	} else {
-		newState = null; // Video -> Unknown
-	}
-
-	const labels = {
-		true: "Song",
-		false: "Video",
-		null: "Unknown",
-	};
-
-	// Confirm with user
-	const confirmed = confirm(
-		`Mark this video as: ${labels[newState]}?\n\nVideo ID: ${videoId}`
-	);
-
-	if (!confirmed) return;
-
-	// Disable button
-	button.disabled = true;
-	const originalOpacity = button.style.opacity;
-	button.style.opacity = "0.5";
-
-	try {
-		const response = await fetch(`${API_ENDPOINT}/classify`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				videoId,
-				isSong: newState,
-			}),
-		});
-
-		if (!response.ok) {
-			throw new Error("Classification failed");
-		}
-
-		// Update local data
-		const video = allVideos.find((v) => v.videoId === videoId);
-		if (video) {
-			video.isSong = newState;
-		}
-
-		// Update UI
-		updateCounts();
-		applyFiltersAndSort();
-	} catch (error) {
-		console.error("Error classifying video:", error);
-		alert("Failed to update classification");
-	} finally {
-		button.disabled = false;
-		button.style.opacity = originalOpacity || "1";
-	}
 }
 
 // Load statistics

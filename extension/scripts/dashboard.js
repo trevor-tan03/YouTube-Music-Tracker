@@ -555,10 +555,10 @@ function renderVideos() {
 					)}</div>
                     <div class="dashboard-video-meta">
                         <span>⏱️ ${formatDuration(video.duration)}</span>
-                        <span>▶️ ${Math.round(
-							video.listening_time / video.duration
-						)} plays</span>
-                        <span>📅 ${formatDate(video.createdAt)}</span>
+                        <span>🎧 ${formatDuration(
+							video.total_listening_time
+						)}</span>
+                        <span>▶️ ${video.play_count ?? 0}</span>
                     </div>
                 </div>
                 <div class="dashboard-video-actions">

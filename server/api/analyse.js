@@ -17,6 +17,7 @@ export async function analyseVideo(req, res) {
 		let message;
 
 		console.log(`\nDetected video: ${title}`);
+		console.log(`Genre: ${genre || "(undefined)"}`);
 
 		// Validate required fields
 		if (!videoId || !title || !channel || !description) {
@@ -65,15 +66,24 @@ export async function analyseVideo(req, res) {
 		} else if (genre === "Entertainment" || genre === "People & Blogs") {
 			// 2. If possible genre for music related video, check using LLM
 			console.log("Analysing with LLM...");
-			result = await analyzeWithLLM(
-				videoId,
-				title,
-				channel,
-				description,
-				thumbnailUrl
-			);
-			isSong = result.isSong;
-			message = registerVideo(req.body, isSong);
+			result = await analyzeWithLLM(title, channel, description, genre);
+
+			if (!result) {
+				console.error("LLM analysis failed, defaulting to not a song");
+				isSong = false;
+				message = registerVideo(req.body, false);
+			} else {
+				isSong = result.isSong;
+				console.log(
+					`LLM result: isSong=${isSong}, confidence=${result.confidence}, reasoning=${result.reasoning}`
+				);
+				message = registerVideo(req.body, isSong);
+			}
+		} else {
+			// 3. For all other genres, register as not a song
+			console.log(`Genre "${genre}" is not suitable for music content`);
+			isSong = false;
+			message = registerVideo(req.body, false);
 		}
 
 		// Create listening session only if it's a song

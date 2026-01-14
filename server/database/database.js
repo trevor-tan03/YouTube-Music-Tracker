@@ -11,7 +11,8 @@ db.prepare(
         channel TEXT,
         duration INTEGER,              -- video length in seconds
         is_song INTEGER DEFAULT 0,     -- boolean (0/1)
-        thumbnail_url TEXT
+        thumbnail_url TEXT,
+        created_at INTEGER  -- Unix timestamp 
     );
     `
 ).run();

@@ -2,30 +2,32 @@ import { db } from "../database/database.js";
 
 export async function getVideos(req, res) {
 	try {
-		// Get query parameters
+		// Query params
 		const searchFilter = req.query.search || "";
-		const classification = req.query.classification; // 'song', 'video', 'unknown', or undefined for all
+		const classification = req.query.classification; // song | video | unknown
 		const limit = parseInt(req.query.limit) || 50;
 		const offset = parseInt(req.query.offset) || 0;
-		const sortBy = req.query.sortBy || "recent"; // recent, oldest, most-played, duration-desc, duration-asc, title
+		const sortBy = req.query.sortBy || "recent";
 
-		// Build the WHERE clause
+		// ---------------------------------------------------------
+		// WHERE CLAUSE
+		// ---------------------------------------------------------
 		let whereConditions = [];
 		let params = [];
 
-		// Search filter
+		// Search
 		if (searchFilter) {
-			whereConditions.push("(title LIKE ? OR channel LIKE ?)");
+			whereConditions.push("(v.title LIKE ? OR v.channel LIKE ?)");
 			params.push(`%${searchFilter}%`, `%${searchFilter}%`);
 		}
 
 		// Classification filter
 		if (classification === "song") {
-			whereConditions.push("is_song = 1");
+			whereConditions.push("v.is_song = 1");
 		} else if (classification === "video") {
-			whereConditions.push("is_song = 0");
+			whereConditions.push("v.is_song = 0");
 		} else if (classification === "unknown") {
-			whereConditions.push("is_song IS NULL");
+			whereConditions.push("v.is_song IS NULL");
 		}
 
 		const whereClause =
@@ -33,22 +35,67 @@ export async function getVideos(req, res) {
 				? `WHERE ${whereConditions.join(" AND ")}`
 				: "";
 
-		// Get total count for pagination info
-		const countQuery = `SELECT COUNT(*) as total FROM video ${whereClause}`;
-		const countResult = db.prepare(countQuery).get(...params);
-		const total = countResult.total;
+		// ---------------------------------------------------------
+		// SORTING LOGIC
+		// ---------------------------------------------------------
+		let orderBy = "v.created_at DESC"; // default (recent)
 
-		// Get videos with pagination
+		switch (sortBy) {
+			case "oldest":
+				orderBy = "v.created_at ASC";
+				break;
+
+			case "title":
+				orderBy = "v.title COLLATE NOCASE ASC";
+				break;
+
+			case "duration-desc":
+				orderBy = "v.duration DESC";
+				break;
+
+			case "duration-asc":
+				orderBy = "v.duration ASC";
+				break;
+
+			case "most-played":
+				orderBy = "total_listening_time DESC";
+				break;
+
+			default:
+				orderBy = "v.created_at DESC";
+		}
+
+		// ---------------------------------------------------------
+		// COUNT QUERY (no LIMIT/OFFSET)
+		// ---------------------------------------------------------
+		const countQuery = `
+            SELECT COUNT(*) as total
+            FROM video v
+            ${whereClause}
+        `;
+		const total = db.prepare(countQuery).get(...params).total;
+
+		// ---------------------------------------------------------
+		// MAIN QUERY WITH LISTENING TIME
+		// ---------------------------------------------------------
 		const query = `
-			SELECT * FROM video 
+			SELECT 
+				v.*,
+				IFNULL(SUM(ls.listening_time), 0) AS total_listening_time,
+				CASE 
+					WHEN v.duration > 0 THEN CAST(SUM(ls.listening_time) / v.duration AS FLOAT)
+					ELSE 0
+				END AS play_count
+			FROM video v
+			LEFT JOIN listening_session ls ON ls.video_id = v.id
 			${whereClause}
+			GROUP BY v.id
+			ORDER BY ${orderBy}
 			LIMIT ? OFFSET ?
 		`;
 
-		params.push(limit, offset);
-		const videos = db.prepare(query).all(...params);
+		const videos = db.prepare(query).all(...params, limit, offset);
 
-		// Return response with pagination metadata
 		return res.status(200).json({
 			videos,
 			pagination: {

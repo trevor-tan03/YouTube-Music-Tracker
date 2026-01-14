@@ -3,9 +3,23 @@ export function validateLLMOutput(raw) {
 
 	// Try to parse JSON safely
 	try {
-		data = typeof raw === "string" ? JSON.parse(raw) : raw;
+		if (typeof raw !== "string") {
+			data = raw;
+		} else {
+			// Strip markdown code fences if present (```json ... ```)
+			let cleaned = raw.trim();
+			if (cleaned.startsWith("```")) {
+				// Remove opening ```json or ```
+				cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "");
+				// Remove closing ```
+				cleaned = cleaned.replace(/\n?```\s*$/, "");
+				cleaned = cleaned.trim();
+			}
+			data = JSON.parse(cleaned);
+		}
 	} catch (e) {
 		console.error("Invalid JSON:", e);
+		console.error("Raw response:", raw);
 		return null;
 	}
 

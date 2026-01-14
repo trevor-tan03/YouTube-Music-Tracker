@@ -51,7 +51,7 @@ export async function analyzeWithLLM(title, channel, description, genre) {
 
 	// Call the LLM API
 	const completion = await lmStudio.chat.completions.create({
-		model: "liquid/lfm2-1.2b", // LM Studio uses whatever model is loaded
+		model: "google/gemma-3-1b", // LM Studio uses whatever model is loaded
 		messages: [
 			{
 				role: "system",

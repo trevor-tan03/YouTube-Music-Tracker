@@ -323,16 +323,43 @@ async function onNewVideoLoaded() {
 			genre,
 		} = JSON.parse(microformatScript.innerText);
 
+		// Replace your current duration-parsing block with this:
 		const durationEl = document.querySelector(".ytp-time-duration");
 		if (!durationEl) {
 			console.error("Duration element not found");
 			return;
 		}
 
-		const durationString = durationEl.innerText.split(":");
-		const duration =
-			Number.parseInt(durationString[0]) * 60 +
-			Number.parseInt(durationString[1]);
+		function parseDurationText(text) {
+			if (!text || typeof text !== "string") return 0;
+			// Remove whitespace and any non-digit/colon characters (safe-guard)
+			const cleaned = text.trim().replace(/[^0-9:]/g, "");
+			const parts = cleaned.split(":").map((p) => parseInt(p, 10) || 0);
+
+			// parts examples:
+			// [ss] => seconds
+			// [mm, ss] => minutes, seconds
+			// [hh, mm, ss] => hours, minutes, seconds
+			if (parts.length === 1) {
+				return parts[0];
+			} else if (parts.length === 2) {
+				return parts[0] * 60 + parts[1];
+			} else if (parts.length === 3) {
+				return parts[0] * 3600 + parts[1] * 60 + parts[2];
+			} else {
+				// Unexpected format — fall back to summing from the right
+				let seconds = 0;
+				let multiplier = 1;
+				for (let i = parts.length - 1; i >= 0; i--) {
+					seconds += parts[i] * multiplier;
+					multiplier *= 60;
+				}
+				return seconds;
+			}
+		}
+
+		const durationText = durationEl.textContent || durationEl.innerText;
+		const duration = parseDurationText(durationText);
 
 		const payload = {
 			title,

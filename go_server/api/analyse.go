@@ -14,10 +14,12 @@ type YouTubeMetaData struct {
 	Genre       string `json:"genre"`
 }
 
-func AnalyseVideo(c *gin.Context) {
+func (h *Handler) AnalyseVideo(c *gin.Context) {
 	var videoMetaData YouTubeMetaData
 
 	if err := c.BindJSON(&videoMetaData); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
+
+	c.JSON(http.StatusOK, "LOL")
 }

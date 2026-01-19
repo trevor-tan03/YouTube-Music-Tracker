@@ -5,24 +5,26 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/trevor-tan03/YouTube-Music-Tracker/api"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
 	router := gin.Default()
 
-	DB, err := sql.Open("sqlite3", "../server/youtube-music-tracker.db")
+	db, err := sql.Open("sqlite", "../server/youtube-music-tracker.db")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer DB.Close()
 
-	router.POST("/listen", api.AddSongListeningTime)
-	router.POST("/classify", api.ClassifyVideo)
-	router.POST("/anaylse", api.AnalyseVideo)
-	router.GET("/top-listens", api.GetTopListens)
-	router.GET("/videos", api.GetVideos)
+	handler := api.NewHandler(db)
+	defer db.Close()
 
-	router.Run("localhost:3000")
+	router.POST("/listen", handler.AddSongListeningTime)
+	router.POST("/classify", handler.ClassifyVideo)
+	router.POST("/anaylse", handler.AnalyseVideo)
+	router.GET("/top-listens", handler.GetTopListens)
+	router.GET("/videos", handler.GetVideos)
+
+	router.Run("localhost:8080")
 }

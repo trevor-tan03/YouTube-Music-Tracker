@@ -14,7 +14,7 @@ type Song struct {
 	IsSong   bool   `json:"is_song"`
 }
 
-func GetTopListens(c *gin.Context) {
+func (h *Handler) GetTopListens(c *gin.Context) {
 	var listeningSession ListeningSession
 
 	if err := c.BindJSON(&listeningSession); err != nil {
@@ -27,4 +27,7 @@ func GetTopListens(c *gin.Context) {
 	//
 	//
 	//
+	//
+
+	c.JSON(http.StatusOK, "LOL")
 }

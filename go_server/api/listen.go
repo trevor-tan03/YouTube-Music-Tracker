@@ -11,7 +11,7 @@ type ListeningSession struct {
 	ListeningTime uint32 `json:"listeningTime"`
 }
 
-func AddSongListeningTime(c *gin.Context) {
+func (h *Handler) AddSongListeningTime(c *gin.Context) {
 	var listeningSession ListeningSession
 
 	if err := c.BindJSON(&listeningSession); err != nil {
@@ -24,4 +24,6 @@ func AddSongListeningTime(c *gin.Context) {
 	//
 	//
 	//
+
+	c.JSON(http.StatusOK, "LOL")
 }

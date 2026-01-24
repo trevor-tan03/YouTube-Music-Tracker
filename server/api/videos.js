@@ -40,6 +40,7 @@ export async function getVideos(req, res) {
     // TIME PERIOD FILTER (for listening sessions)
     // ---------------------------------------------------------
     let periodFilter = "";
+    let havingClause = "";
 
     if (period) {
       switch (period) {
@@ -69,6 +70,12 @@ export async function getVideos(req, res) {
         default:
           // no time filter
           break;
+      }
+
+      // When a period is specified, only include videos with listening time > 0
+      // This prevents videos with no plays in the period from appearing
+      if (period && period !== "all") {
+        havingClause = "HAVING IFNULL(SUM(ls.listening_time), 0) > 0";
       }
     }
 
@@ -100,12 +107,19 @@ export async function getVideos(req, res) {
     }
 
     // ---------------------------------------------------------
-    // COUNT QUERY (no LIMIT/OFFSET)
+    // COUNT QUERY (with period filter)
     // ---------------------------------------------------------
+    // When period is set, we need to count only videos with listening sessions in that period
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM video v
-      ${whereClause}
+      FROM (
+        SELECT v.id
+        FROM video v
+        LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+        ${whereClause}
+        GROUP BY v.id
+        ${havingClause}
+      )
     `;
     const total = db.prepare(countQuery).get(...params).total;
 
@@ -124,6 +138,7 @@ export async function getVideos(req, res) {
       LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
       ${whereClause}
       GROUP BY v.id
+      ${havingClause}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
     `;
@@ -138,7 +153,7 @@ export async function getVideos(req, res) {
         COUNT(DISTINCT v.id) AS total_videos,
         IFNULL(SUM(ls.listening_time), 0) AS total_listening_time
       FROM video v
-      LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+      INNER JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
       ${whereClause}
     `;
 
@@ -147,8 +162,8 @@ export async function getVideos(req, res) {
     return res.status(200).json({
       videos,
       stats: {
-        totalVideos: stats.total_videos,
-        totalListeningTime: stats.total_listening_time,
+        totalVideos: stats.total_videos || 0,
+        totalListeningTime: stats.total_listening_time || 0,
       },
       pagination: {
         total,

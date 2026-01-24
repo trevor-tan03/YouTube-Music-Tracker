@@ -1,225 +1,298 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>YouTube Music Tracker - Dashboard</title>
-		<link rel="stylesheet" href="./styles/dashboard.css" />
-	</head>
-	<body class="dashboard-page">
-		<div class="dashboard-container">
-			<header class="dashboard-header">
-				<h1>🎵 YouTube Music Tracker</h1>
-				<p class="subtitle">
-					Track and manage your YouTube listening habits
-				</p>
-			</header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>YouTube Music Tracker - Dashboard</title>
+        <link rel="stylesheet" href="./styles/dashboard.css" />
+    </head>
+    <body class="dashboard-page">
+        <div class="dashboard-container">
+            <header class="dashboard-header">
+                <h1>🎵 YouTube Music Tracker</h1>
+                <p class="subtitle">
+                    Track and manage your YouTube listening habits
+                </p>
+            </header>
 
-			<nav class="dashboard-nav">
-				<button class="dashboard-tab active" data-view="top-tracks">
-					<span class="icon">🏆</span>
-					<span>Top Tracks</span>
-				</button>
-				<button class="dashboard-tab" data-view="all-videos">
-					<span class="icon">📹</span>
-					<span>All Videos</span>
-				</button>
-				<button class="dashboard-tab" data-view="stats">
-					<span class="icon">📊</span>
-					<span>Statistics</span>
-				</button>
-			</nav>
+            <nav class="dashboard-nav">
+                <button class="dashboard-tab active" data-view="top-tracks">
+                    <span class="icon">🏆</span>
+                    <span>Top Tracks</span>
+                </button>
+                <button class="dashboard-tab" data-view="all-videos">
+                    <span class="icon">📹</span>
+                    <span>All Videos</span>
+                </button>
+                <button class="dashboard-tab" data-view="stats">
+                    <span class="icon">📊</span>
+                    <span>Statistics</span>
+                </button>
+            </nav>
 
-			<!-- Top Tracks View -->
-			<section id="top-tracks-view" class="dashboard-view active">
-				<div class="view-section">
-					<h2 class="section-title">Your Most Listened Tracks</h2>
-					<div class="tabs">
-						<button class="tab active" data-period="day">
-							Today
-						</button>
-						<button class="tab" data-period="week">
-							This Week
-						</button>
-						<button class="tab" data-period="month">
-							This Month
-						</button>
-						<button class="tab" data-period="year">
-							This Year
-						</button>
-						<button class="tab" data-period="all">All Time</button>
-					</div>
-				</div>
+            <!-- Top Tracks View -->
+            <section id="top-tracks-view" class="dashboard-view active">
+                <div class="view-section">
+                    <h2 class="section-title">Your Most Listened Tracks</h2>
 
-				<div class="dashboard-content">
-					<div id="tracks-container" class="dashboard-tracks-grid">
-						<div class="loading">Loading your top tracks...</div>
-					</div>
-				</div>
-			</section>
+                    <div class="search-bar">
+                        <input
+                            type="text"
+                            id="tracks-search-input"
+                            placeholder="Search tracks by title or channel..."
+                        />
+                    </div>
 
-			<!-- All Videos View -->
-			<section id="all-videos-view" class="dashboard-view">
-				<div class="view-section">
-					<h2 class="section-title">All Tracked Videos</h2>
+                    <div class="tabs">
+                        <button class="tab active" data-period="day">
+                            Today
+                        </button>
+                        <button class="tab" data-period="week">
+                            This Week
+                        </button>
+                        <button class="tab" data-period="month">
+                            This Month
+                        </button>
+                        <button class="tab" data-period="year">
+                            This Year
+                        </button>
+                        <button class="tab" data-period="all">All Time</button>
+                    </div>
 
-					<div class="dashboard-controls">
-						<div class="search-bar">
-							<input
-								type="text"
-								id="search-input"
-								placeholder="Search by title or channel..."
-							/>
-						</div>
+                    <div
+                        class="tracks-stats"
+                        id="tracks-stats"
+                        style="
+                            margin-top: 1rem;
+                            padding: 1rem;
+                            background: rgba(136, 192, 208, 0.1);
+                            border-radius: 8px;
+                            display: none;
+                        "
+                    >
+                        <div
+                            style="
+                                display: flex;
+                                gap: 2rem;
+                                justify-content: center;
+                                flex-wrap: wrap;
+                            "
+                        >
+                            <div style="text-align: center">
+                                <div
+                                    style="
+                                        font-size: 1.5rem;
+                                        font-weight: bold;
+                                        color: #88c0d0;
+                                    "
+                                    id="tracks-count"
+                                >
+                                    0
+                                </div>
+                                <div
+                                    style="
+                                        font-size: 0.875rem;
+                                        color: #d8dee9;
+                                        opacity: 0.8;
+                                    "
+                                >
+                                    Tracks
+                                </div>
+                            </div>
+                            <div style="text-align: center">
+                                <div
+                                    style="
+                                        font-size: 1.5rem;
+                                        font-weight: bold;
+                                        color: #88c0d0;
+                                    "
+                                    id="tracks-total-time"
+                                >
+                                    0h 0m
+                                </div>
+                                <div
+                                    style="
+                                        font-size: 0.875rem;
+                                        color: #d8dee9;
+                                        opacity: 0.8;
+                                    "
+                                >
+                                    Total Listening Time
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-						<div class="filter-group">
-							<button
-								class="filter-btn tab active"
-								data-filter="all"
-							>
-								All <span class="count" id="count-all">0</span>
-							</button>
-							<button class="filter-btn tab" data-filter="songs">
-								🎵 Songs
-								<span class="count" id="count-songs">0</span>
-							</button>
-							<button class="filter-btn tab" data-filter="videos">
-								📹 Videos
-								<span class="count" id="count-videos">0</span>
-							</button>
-						</div>
+                <div class="dashboard-content">
+                    <div id="tracks-container" class="dashboard-tracks-grid">
+                        <div class="loading">Loading your top tracks...</div>
+                    </div>
+                </div>
+            </section>
 
-						<div class="sort-group">
-							<label for="sort-by">Sort by:</label>
-							<select id="sort-by">
-								<option value="recent">Most Recent</option>
-								<option value="oldest">Oldest First</option>
-								<option value="most-played">Most Played</option>
-								<option value="duration-desc">
-									Longest Duration
-								</option>
-								<option value="duration-asc">
-									Shortest Duration
-								</option>
-								<option value="title">Title (A-Z)</option>
-							</select>
-						</div>
-					</div>
-				</div>
+            <!-- All Videos View -->
+            <section id="all-videos-view" class="dashboard-view">
+                <div class="view-section">
+                    <h2 class="section-title">All Tracked Videos</h2>
 
-				<div class="dashboard-content">
-					<div id="videos-container" class="dashboard-videos-list">
-						<div class="loading">Loading videos...</div>
-					</div>
-				</div>
-			</section>
+                    <div class="dashboard-controls">
+                        <div class="search-bar">
+                            <input
+                                type="text"
+                                id="search-input"
+                                placeholder="Search by title or channel..."
+                            />
+                        </div>
 
-			<!-- Statistics View -->
-			<section id="stats-view" class="dashboard-view">
-				<div class="view-section">
-					<h2 class="section-title">Your Listening Statistics</h2>
-				</div>
+                        <div class="filter-group">
+                            <button
+                                class="filter-btn tab active"
+                                data-filter="all"
+                            >
+                                All <span class="count" id="count-all">0</span>
+                            </button>
+                            <button class="filter-btn tab" data-filter="songs">
+                                🎵 Songs
+                                <span class="count" id="count-songs">0</span>
+                            </button>
+                            <button class="filter-btn tab" data-filter="videos">
+                                📹 Videos
+                                <span class="count" id="count-videos">0</span>
+                            </button>
+                        </div>
 
-				<div class="dashboard-content">
-					<div class="stats-grid">
-						<div class="stat-card">
-							<div class="stat-icon">🎵</div>
-							<div class="stat-value" id="stat-total-songs">
-								-
-							</div>
-							<div class="stat-label">Total Songs</div>
-						</div>
+                        <div class="sort-group">
+                            <label for="sort-by">Sort by:</label>
+                            <select id="sort-by">
+                                <option value="recent">Most Recent</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="most-played">Most Played</option>
+                                <option value="duration-desc">
+                                    Longest Duration
+                                </option>
+                                <option value="duration-asc">
+                                    Shortest Duration
+                                </option>
+                                <option value="title">Title (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-						<div class="stat-card">
-							<div class="stat-icon">⏱️</div>
-							<div class="stat-value" id="stat-listening-time">
-								-
-							</div>
-							<div class="stat-label">Listening Time</div>
-						</div>
+                <div class="dashboard-content">
+                    <div id="videos-container" class="dashboard-videos-list">
+                        <div class="loading">Loading videos...</div>
+                    </div>
+                </div>
+            </section>
 
-						<div class="stat-card">
-							<div class="stat-icon">▶️</div>
-							<div class="stat-value" id="stat-total-plays">
-								-
-							</div>
-							<div class="stat-label">Total Plays</div>
-						</div>
+            <!-- Statistics View -->
+            <section id="stats-view" class="dashboard-view">
+                <div class="view-section">
+                    <h2 class="section-title">Your Listening Statistics</h2>
+                </div>
 
-						<div class="stat-card">
-							<div class="stat-icon">📹</div>
-							<div class="stat-value" id="stat-total-videos">
-								-
-							</div>
-							<div class="stat-label">Total Videos</div>
-						</div>
-					</div>
+                <div class="dashboard-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🎵</div>
+                            <div class="stat-value" id="stat-total-songs">
+                                -
+                            </div>
+                            <div class="stat-label">Total Songs</div>
+                        </div>
 
-					<div class="loading" id="stats-loading">
-						Loading statistics...
-					</div>
-				</div>
-			</section>
-		</div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-value" id="stat-listening-time">
+                                -
+                            </div>
+                            <div class="stat-label">Listening Time</div>
+                        </div>
 
-		<!-- Classification Modal -->
-		<div id="classification-modal" class="modal-overlay">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h2 class="modal-title">Classify Video</h2>
-					<p class="modal-video-title" id="modal-video-title"></p>
-				</div>
+                        <div class="stat-card">
+                            <div class="stat-icon">▶️</div>
+                            <div class="stat-value" id="stat-total-plays">
+                                -
+                            </div>
+                            <div class="stat-label">Total Plays</div>
+                        </div>
 
-				<div class="classification-options">
-					<label class="classification-option">
-						<input
-							type="radio"
-							name="classification"
-							value="true"
-						/>
-						<div class="option-content">
-							<div class="option-label">
-								<span>🎵</span>
-								<span>Song</span>
-							</div>
-							<div class="option-description">
-								Music videos, audio tracks, and songs
-							</div>
-						</div>
-					</label>
+                        <div class="stat-card">
+                            <div class="stat-icon">📹</div>
+                            <div class="stat-value" id="stat-total-videos">
+                                -
+                            </div>
+                            <div class="stat-label">Total Videos</div>
+                        </div>
+                    </div>
 
-					<label class="classification-option">
-						<input
-							type="radio"
-							name="classification"
-							value="false"
-						/>
-						<div class="option-content">
-							<div class="option-label">
-								<span>📹</span>
-								<span>Video</span>
-							</div>
-							<div class="option-description">
-								Non-music content, vlogs, tutorials, etc.
-							</div>
-						</div>
-					</label>
-				</div>
+                    <div class="loading" id="stats-loading">
+                        Loading statistics...
+                    </div>
+                </div>
+            </section>
+        </div>
 
-				<div class="modal-actions">
-					<button
-						class="modal-btn modal-btn-cancel"
-						id="modal-cancel"
-					>
-						Cancel
-					</button>
-					<button class="modal-btn modal-btn-save" id="modal-save">
-						Save Classification
-					</button>
-				</div>
-			</div>
-		</div>
+        <!-- Classification Modal -->
+        <div id="classification-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Classify Video</h2>
+                    <p class="modal-video-title" id="modal-video-title"></p>
+                </div>
 
-		<script src="scripts/dashboard.js"></script>
-	</body>
+                <div class="classification-options">
+                    <label class="classification-option">
+                        <input
+                            type="radio"
+                            name="classification"
+                            value="true"
+                        />
+                        <div class="option-content">
+                            <div class="option-label">
+                                <span>🎵</span>
+                                <span>Song</span>
+                            </div>
+                            <div class="option-description">
+                                Music videos, audio tracks, and songs
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="classification-option">
+                        <input
+                            type="radio"
+                            name="classification"
+                            value="false"
+                        />
+                        <div class="option-content">
+                            <div class="option-label">
+                                <span>📹</span>
+                                <span>Video</span>
+                            </div>
+                            <div class="option-description">
+                                Non-music content, vlogs, tutorials, etc.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button
+                        class="modal-btn modal-btn-cancel"
+                        id="modal-cancel"
+                    >
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-save" id="modal-save">
+                        Save Classification
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="scripts/dashboard.js"></script>
+    </body>
 </html>

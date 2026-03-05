@@ -6,460 +6,469 @@ let lastSentTime = 0;
 const SEND_INTERVAL_MS = 30000; // Send every 30 seconds
 let isSong; // undefined = unknown, true = song, false = video
 let songButton = null;
+let videoDetails = null;
 
 function isAdPlaying() {
-	return Boolean(document.querySelector("div.ad-showing"));
+    return Boolean(document.querySelector("div.ad-showing"));
 }
 
 function updateSongButton() {
-	if (!songButton) return;
+    if (!songButton) return;
 
-	const button = songButton.querySelector("button");
-	if (!button) return;
+    const button = songButton.querySelector("button");
+    if (!button) return;
 
-	if (isSong === undefined) {
-		button.textContent = "❓ Unknown";
-		button.style.opacity = "0.7";
-	} else if (isSong) {
-		button.textContent = "🎵 Song";
-		button.style.opacity = "1";
-	} else {
-		button.textContent = "📹 Video";
-		button.style.opacity = "1";
-	}
+    if (isSong === undefined) {
+        button.textContent = "❓ Unknown";
+        button.style.opacity = "0.7";
+    } else if (isSong) {
+        button.textContent = "🎵 Song";
+        button.style.opacity = "1";
+    } else {
+        button.textContent = "📹 Video";
+        button.style.opacity = "1";
+    }
 }
 
 function addSongButton() {
-	// Remove existing button if any
-	const existing = document.querySelector("#yt-song-classifier");
-	if (existing) {
-		existing.remove();
-	}
+    // Remove existing button if any
+    const existing = document.querySelector("#yt-song-classifier");
+    if (existing) {
+        existing.remove();
+    }
 
-	// Create button structure
-	const container = document.createElement("yt-button-view-model");
-	container.className = "ytd-menu-renderer";
-	container.id = "yt-song-classifier";
+    // Create button structure
+    const container = document.createElement("yt-button-view-model");
+    container.className = "ytd-menu-renderer";
+    container.id = "yt-song-classifier";
 
-	const buttonModel = document.createElement("button-view-model");
-	buttonModel.className =
-		"ytSpecButtonViewModelHost style-scope ytd-menu-renderer";
+    const buttonModel = document.createElement("button-view-model");
+    buttonModel.className =
+        "ytSpecButtonViewModelHost style-scope ytd-menu-renderer";
 
-	const button = document.createElement("button");
-	button.className =
-		"yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading";
-	button.textContent = "❓ Unknown";
-	button.style.transition = "opacity 0.2s";
+    const button = document.createElement("button");
+    button.className =
+        "yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading";
+    button.textContent = "❓ Unknown";
+    button.style.transition = "opacity 0.2s";
 
-	button.addEventListener("click", async () => {
-		const videoId = getVideoId();
-		if (!videoId) {
-			console.error("No video ID found");
-			return;
-		}
+    button.addEventListener("click", async () => {
+        const videoId = getVideoId();
+        if (!videoId) {
+            console.error("No video ID found");
+            return;
+        }
 
-		// Show confirmation dialog
-		const newState = !Boolean(isSong);
-		const confirmed = confirm(
-			`Mark this video as: ${
-				newState ? "Song" : "Not a Song"
-			}?\n\nVideo ID: ${videoId}`
-		);
+        // Show confirmation dialog
+        const newState = !Boolean(isSong);
+        const confirmed = confirm(
+            `Mark this video as: ${
+                newState ? "Song" : "Not a Song"
+            }?\n\nVideo ID: ${videoId}`,
+        );
 
-		if (!confirmed) return;
+        if (!confirmed) return;
 
-		// Disable button during request
-		button.disabled = true;
-		button.style.opacity = "0.5";
+        // Disable button during request
+        button.disabled = true;
+        button.style.opacity = "0.5";
 
-		try {
-			console.log(
-				JSON.stringify({
-					videoId: videoId,
-					isSong: newState,
-				})
-			);
+        try {
+            console.log(
+                JSON.stringify({
+                    videoId: videoId,
+                    isSong: newState,
+                }),
+            );
 
-			const response = await fetch("http://localhost:3000/classify", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					videoId: videoId,
-					isSong: newState,
-				}),
-			});
+            const response = await fetch("http://localhost:3000/classify", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    isSong: newState,
+                }),
+            });
 
-			if (response.ok) {
-				const data = await response.json();
-				console.log("Classification updated:", data);
-				isSong = newState;
-				updateSongButton();
-			} else {
-				console.error("Classification failed:", await response.text());
-				alert("Failed to update classification");
-			}
-		} catch (error) {
-			console.error("Error updating classification:", error);
-			alert("Error updating classification");
-		} finally {
-			button.disabled = false;
-			button.style.opacity = "1";
-		}
-	});
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Classification updated:", data);
+                isSong = newState;
+                updateSongButton();
+            } else {
+                console.error("Classification failed:", await response.text());
+                alert("Failed to update classification");
+            }
+        } catch (error) {
+            console.error("Error updating classification:", error);
+            alert("Error updating classification");
+        } finally {
+            button.disabled = false;
+            button.style.opacity = "1";
+        }
+    });
 
-	// Assemble
-	buttonModel.appendChild(button);
-	container.appendChild(buttonModel);
-	songButton = container;
+    // Assemble
+    buttonModel.appendChild(button);
+    container.appendChild(buttonModel);
+    songButton = container;
 
-	// Insert into YouTube page
-	const target = document.querySelector("#top-level-buttons-computed");
-	if (target) {
-		target.appendChild(container);
-		updateSongButton();
-	}
+    // Insert into YouTube page
+    const target = document.querySelector("#top-level-buttons-computed");
+    if (target) {
+        target.appendChild(container);
+        updateSongButton();
+    }
 }
 
 function waitForButtons(maxAttempts = 40) {
-	return new Promise((resolve, reject) => {
-		const checkButton = () => {
-			const target = document.querySelector(
-				"#top-level-buttons-computed"
-			);
-			if (target) {
-				return target;
-			}
-			return null;
-		};
+    return new Promise((resolve, reject) => {
+        const checkButton = () => {
+            const target = document.querySelector(
+                "#top-level-buttons-computed",
+            );
+            if (target) {
+                return target;
+            }
+            return null;
+        };
 
-		// Check immediately
-		const existing = checkButton();
-		if (existing) {
-			return resolve(existing);
-		}
+        // Check immediately
+        const existing = checkButton();
+        if (existing) {
+            return resolve(existing);
+        }
 
-		let attempts = 0;
-		const interval = setInterval(() => {
-			attempts++;
-			const target = checkButton();
-			if (target) {
-				clearInterval(interval);
-				resolve(target);
-			}
-			if (attempts >= maxAttempts) {
-				clearInterval(interval);
-				reject(
-					new Error("Buttons container not found after 10 seconds")
-				);
-			}
-		}, 250);
-	});
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            const target = checkButton();
+            if (target) {
+                clearInterval(interval);
+                resolve(target);
+            }
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                reject(
+                    new Error("Buttons container not found after 10 seconds"),
+                );
+            }
+        }, 250);
+    });
 }
 
 function sendListeningData() {
-	if (!currentSessionId || totalListenMs === 0) return;
+    if (!currentSessionId || totalListenMs === 0) return;
 
-	const listeningTime = (totalListenMs / 1000).toFixed(1);
-	console.log(`📊 Sending listening update: ${listeningTime}s`);
+    const listeningTime = (totalListenMs / 1000).toFixed(1);
+    console.log(`📊 Sending listening update: ${listeningTime}s`);
 
-	try {
-		chrome.runtime.sendMessage(
-			{
-				type: "listen",
-				sessionId: currentSessionId,
-				listeningTime,
-			},
-			(response) => {
-				if (chrome.runtime.lastError) {
-					console.error(
-						"Extension context invalidated:",
-						chrome.runtime.lastError.message
-					);
-					if (playbackInterval) {
-						clearInterval(playbackInterval);
-						playbackInterval = null;
-					}
-					return;
-				}
-				if (!response) {
-					console.error("No response from background script");
-					return;
-				}
-				if (!response.ok) {
-					console.error("Listening request failed:", response);
-				} else {
-					console.log(response.data);
-				}
-			}
-		);
-	} catch (error) {
-		console.error("Failed to send message:", error);
-		if (playbackInterval) {
-			clearInterval(playbackInterval);
-			playbackInterval = null;
-		}
-	}
+    try {
+        chrome.runtime.sendMessage(
+            {
+                type: "listen",
+                sessionId: currentSessionId,
+                listeningTime,
+            },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error(
+                        "Extension context invalidated:",
+                        chrome.runtime.lastError.message,
+                    );
+                    if (playbackInterval) {
+                        clearInterval(playbackInterval);
+                        playbackInterval = null;
+                    }
+                    return;
+                }
+                if (!response) {
+                    console.error("No response from background script");
+                    return;
+                }
+                if (!response.ok) {
+                    console.error("Listening request failed:", response);
+                } else {
+                    console.log(response.data);
+                }
+            },
+        );
+    } catch (error) {
+        console.error("Failed to send message:", error);
+        if (playbackInterval) {
+            clearInterval(playbackInterval);
+            playbackInterval = null;
+        }
+    }
 }
 
 function trackPlayback() {
-	const video = document.querySelector("video");
-	if (!video) return;
+    const video = document.querySelector("video");
+    if (!video) return;
 
-	isPlaying = false;
-	startTime = 0;
-	totalListenMs = 0;
-	lastSentTime = 0;
+    isPlaying = false;
+    startTime = 0;
+    totalListenMs = 0;
+    lastSentTime = 0;
 
-	const endedHandler = () => {
-		if (isPlaying) {
-			totalListenMs += Date.now() - startTime;
-			isPlaying = false;
-		}
-		if (totalListenMs > 0) {
-			sendListeningData();
-		}
-	};
-	video.addEventListener("ended", endedHandler);
+    const endedHandler = () => {
+        if (isPlaying) {
+            totalListenMs += Date.now() - startTime;
+            isPlaying = false;
+        }
+        if (totalListenMs > 0) {
+            sendListeningData();
+        }
+    };
+    video.addEventListener("ended", endedHandler);
 
-	playbackInterval = setInterval(() => {
-		const nowPlaying = !video.paused && !video.ended && !isAdPlaying();
-		if (nowPlaying && !isPlaying) {
-			startTime = Date.now();
-			isPlaying = true;
-		} else if (!nowPlaying && isPlaying) {
-			totalListenMs += Date.now() - startTime;
-			isPlaying = false;
-			console.log(
-				`⏸️ Paused — total listening time: ${(
-					totalListenMs / 1000
-				).toFixed(1)}s`
-			);
-		}
+    playbackInterval = setInterval(() => {
+        const nowPlaying = !video.paused && !video.ended && !isAdPlaying();
+        if (nowPlaying && !isPlaying) {
+            startTime = Date.now();
+            isPlaying = true;
+        } else if (!nowPlaying && isPlaying) {
+            totalListenMs += Date.now() - startTime;
+            isPlaying = false;
+            console.log(
+                `⏸️ Paused — total listening time: ${(
+                    totalListenMs / 1000
+                ).toFixed(1)}s`,
+            );
+        }
 
-		const currentTotal = isPlaying
-			? totalListenMs + (Date.now() - startTime)
-			: totalListenMs;
+        const currentTotal = isPlaying
+            ? totalListenMs + (Date.now() - startTime)
+            : totalListenMs;
 
-		if (currentTotal - lastSentTime >= SEND_INTERVAL_MS) {
-			if (isPlaying) {
-				totalListenMs += Date.now() - startTime;
-				startTime = Date.now();
-			}
-			sendListeningData();
-			lastSentTime = totalListenMs;
-		}
-	}, 1000);
+        if (currentTotal - lastSentTime >= SEND_INTERVAL_MS) {
+            if (isPlaying) {
+                totalListenMs += Date.now() - startTime;
+                startTime = Date.now();
+            }
+            sendListeningData();
+            lastSentTime = totalListenMs;
+        }
+    }, 1000);
 }
 
 async function stopTracking() {
-	if (isPlaying) {
-		totalListenMs += Date.now() - startTime;
-		isPlaying = false;
-	}
+    if (isPlaying) {
+        totalListenMs += Date.now() - startTime;
+        isPlaying = false;
+    }
 
-	const listeningTime = (totalListenMs / 1000).toFixed(1);
-	console.log(
-		`🛑 Stopped tracking video ${currentVideoId} — total listen time: ${listeningTime}s`
-	);
+    const listeningTime = (totalListenMs / 1000).toFixed(1);
+    console.log(
+        `🛑 Stopped tracking video ${currentVideoId} — total listen time: ${listeningTime}s`,
+    );
 
-	sendListeningData();
+    sendListeningData();
 
-	if (playbackInterval) {
-		clearInterval(playbackInterval);
-		playbackInterval = null;
-	}
+    if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+    }
 }
 
 function getVideoId() {
-	const url = new URL(window.location.href);
-	return url.searchParams.get("v");
+    const url = new URL(window.location.href);
+    return url.searchParams.get("v");
 }
 
 async function onNewVideoLoaded() {
-	if (isPlaying) {
-		stopTracking();
-	}
+    if (isPlaying) {
+        stopTracking();
+    }
 
-	// Reset song state for new video
-	isSong = null;
+    // Reset song state for new video
+    isSong = null;
 
-	const videoId = getVideoId();
-	if (!videoId) {
-		console.log("No video ID found, skipping");
-		return;
-	}
+    const videoId = getVideoId();
+    if (!videoId) {
+        console.log("No video ID found, skipping");
+        return;
+    }
 
-	console.log(`Loading video: ${videoId}`);
+    console.log(`Loading video: ${videoId}`);
 
-	// Add button as soon as buttons container is available
-	waitForButtons()
-		.then(() => {
-			console.log("Buttons container found, adding song button");
-			addSongButton();
-		})
-		.catch((error) => {
-			console.error("Failed to add song button:", error);
-		});
+    // Add button as soon as buttons container is available
+    waitForButtons()
+        .then(() => {
+            console.log("Buttons container found, adding song button");
+            addSongButton();
+        })
+        .catch((error) => {
+            console.error("Failed to add song button:", error);
+        });
 
-	// Wait for video metadata to load
-	await new Promise((r) => setTimeout(r, 2000));
+    // Wait for video metadata to load
+    await new Promise((r) => setTimeout(r, 2000));
 
-	try {
-		const microformatScript = document.querySelector(
-			"#microformat > player-microformat-renderer > script"
-		);
+    try {
+        const microformatScript = document.querySelector(
+            "#microformat > player-microformat-renderer > script",
+        );
 
-		if (!microformatScript) {
-			console.error("Microformat script not found");
-			return;
-		}
+        if (!microformatScript) {
+            console.error("Microformat script not found");
+            return;
+        }
 
-		const {
-			author: channel,
-			name: title,
-			description,
-			genre,
-		} = JSON.parse(microformatScript.innerText);
+        const {
+            author: channel,
+            name: title,
+            description,
+            genre,
+            thumbnailUrl,
+        } = JSON.parse(microformatScript.innerText);
 
-		// Replace your current duration-parsing block with this:
-		const durationEl = document.querySelector(".ytp-time-duration");
-		if (!durationEl) {
-			console.error("Duration element not found");
-			return;
-		}
+        videoDetails = { title, channel, description, genre, thumbnailUrl };
 
-		function parseDurationText(text) {
-			if (!text || typeof text !== "string") return 0;
-			// Remove whitespace and any non-digit/colon characters (safe-guard)
-			const cleaned = text.trim().replace(/[^0-9:]/g, "");
-			const parts = cleaned.split(":").map((p) => parseInt(p, 10) || 0);
+        // Replace your current duration-parsing block with this:
+        const durationEl = document.querySelector(".ytp-time-duration");
+        if (!durationEl) {
+            console.error("Duration element not found");
+            return;
+        }
 
-			// parts examples:
-			// [ss] => seconds
-			// [mm, ss] => minutes, seconds
-			// [hh, mm, ss] => hours, minutes, seconds
-			if (parts.length === 1) {
-				return parts[0];
-			} else if (parts.length === 2) {
-				return parts[0] * 60 + parts[1];
-			} else if (parts.length === 3) {
-				return parts[0] * 3600 + parts[1] * 60 + parts[2];
-			} else {
-				// Unexpected format — fall back to summing from the right
-				let seconds = 0;
-				let multiplier = 1;
-				for (let i = parts.length - 1; i >= 0; i--) {
-					seconds += parts[i] * multiplier;
-					multiplier *= 60;
-				}
-				return seconds;
-			}
-		}
+        function parseDurationText(text) {
+            if (!text || typeof text !== "string") return 0;
+            // Remove whitespace and any non-digit/colon characters (safe-guard)
+            const cleaned = text.trim().replace(/[^0-9:]/g, "");
+            const parts = cleaned.split(":").map((p) => parseInt(p, 10) || 0);
 
-		const durationText = durationEl.textContent || durationEl.innerText;
-		const duration = parseDurationText(durationText);
+            // parts examples:
+            // [ss] => seconds
+            // [mm, ss] => minutes, seconds
+            // [hh, mm, ss] => hours, minutes, seconds
+            if (parts.length === 1) {
+                return parts[0];
+            } else if (parts.length === 2) {
+                return parts[0] * 60 + parts[1];
+            } else if (parts.length === 3) {
+                return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else {
+                // Unexpected format — fall back to summing from the right
+                let seconds = 0;
+                let multiplier = 1;
+                for (let i = parts.length - 1; i >= 0; i--) {
+                    seconds += parts[i] * multiplier;
+                    multiplier *= 60;
+                }
+                return seconds;
+            }
+        }
 
-		const payload = {
-			title,
-			channel,
-			description,
-			videoId,
-			thumbnailUrl: `https://img.youtube.com/vi/${videoId}/default.jpg`,
-			duration,
-			genre,
-		};
+        const durationText = durationEl.textContent || durationEl.innerText;
+        const duration = parseDurationText(durationText);
 
-		chrome.runtime.sendMessage(
-			{
-				type: "analyse",
-				payload,
-			},
-			(response) => {
-				if (chrome.runtime.lastError) {
-					console.error(
-						"Extension context invalidated:",
-						chrome.runtime.lastError.message
-					);
-					return;
-				}
-				if (!response) {
-					console.error("No response from background script");
-					return;
-				}
-				if (!response.ok) {
-					console.error("Classification request failed:", response);
-					return;
-				} else {
-					console.log(response.data);
+        const payload = {
+            title,
+            channel,
+            description,
+            videoId,
+            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/default.jpg`,
+            duration,
+            genre,
+        };
 
-					// Update isSong state from response
-					if (response.data && response.data.isSong !== undefined) {
-						isSong = response.data.isSong;
-						updateSongButton();
-					}
+        chrome.runtime.sendMessage(
+            {
+                type: "analyse",
+                payload,
+            },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error(
+                        "Extension context invalidated:",
+                        chrome.runtime.lastError.message,
+                    );
+                    return;
+                }
+                if (!response) {
+                    console.error("No response from background script");
+                    return;
+                }
+                if (!response.ok) {
+                    console.error("Classification request failed:", response);
+                    return;
+                } else {
+                    console.log(response.data);
 
-					// Store the session ID if provided
-					if (response.data && response.data.sessionId) {
-						currentSessionId = response.data.sessionId;
-						console.log(`Session ID: ${currentSessionId}`);
-					} else {
-						currentSessionId = null;
-					}
-				}
-			}
-		);
+                    // Update isSong state from response
+                    if (response.data && response.data.isSong !== undefined) {
+                        isSong = response.data.isSong;
+                        updateSongButton();
+                    }
 
-		trackPlayback();
-	} catch (error) {
-		console.error("Error loading video data:", error);
-	}
+                    // Store the session ID if provided
+                    if (response.data && response.data.sessionId) {
+                        currentSessionId = response.data.sessionId;
+                        console.log(`Session ID: ${currentSessionId}`);
+                    } else {
+                        currentSessionId = null;
+                    }
+                }
+            },
+        );
+
+        trackPlayback();
+    } catch (error) {
+        console.error("Error loading video data:", error);
+    }
 }
 
 let currentVideoId;
 let currentSessionId = null;
 
 window.addEventListener("yt-navigate-finish", async () => {
-	const newId = getVideoId();
+    const newId = getVideoId();
 
-	if (newId && newId !== currentVideoId) {
-		console.log("New video detected");
-		await onNewVideoLoaded();
-		currentVideoId = newId;
-	}
+    if (newId && newId !== currentVideoId) {
+        console.log("New video detected");
+        await onNewVideoLoaded();
+        currentVideoId = newId;
+
+        chrome.runtime.sendMessage({
+            type: "currentVideo",
+            video: videoDetails,
+        });
+    }
 });
 
 document.addEventListener("visibilitychange", () => {
-	if (document.hidden && totalListenMs > 0) {
-		if (isPlaying) {
-			totalListenMs += Date.now() - startTime;
-			isPlaying = false;
-		}
-		sendListeningData();
-	}
+    if (document.hidden && totalListenMs > 0) {
+        if (isPlaying) {
+            totalListenMs += Date.now() - startTime;
+            isPlaying = false;
+        }
+        sendListeningData();
+    }
 });
 
 window.addEventListener("beforeunload", (e) => {
-	if (isPlaying) {
-		totalListenMs += Date.now() - startTime;
-		isPlaying = false;
-	}
+    if (isPlaying) {
+        totalListenMs += Date.now() - startTime;
+        isPlaying = false;
+    }
 
-	console.log(
-		`currentVideoId: ${currentVideoId}\ntotalListenTime: ${
-			totalListenMs / 1000
-		}s`
-	);
-	if (!currentVideoId || totalListenMs === 0) return;
+    console.log(
+        `currentVideoId: ${currentVideoId}\ntotalListenTime: ${
+            totalListenMs / 1000
+        }s`,
+    );
+    if (!currentVideoId || totalListenMs === 0) return;
 
-	try {
-		chrome.runtime.sendMessage({
-			type: "listen",
-			sessionId: currentSessionId,
-			listeningTime: (totalListenMs / 1000).toFixed(1),
-		});
-	} catch (error) {
-		console.error("Failed to send beforeunload message:", error);
-	}
+    try {
+        chrome.runtime.sendMessage({
+            type: "listen",
+            sessionId: currentSessionId,
+            listeningTime: (totalListenMs / 1000).toFixed(1),
+        });
+    } catch (error) {
+        console.error("Failed to send beforeunload message:", error);
+    }
 });

@@ -1,33 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>YouTube Music Tracker</title>
-		<link rel="stylesheet" href="./styles/popup.css" />
-	</head>
-	<body style="border-radius: 10px">
-		<div class="header">
-			<h1>🎵 Top Tracks</h1>
-			<div class="subtitle">Your most listened songs</div>
-		</div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>YouTube Music Tracker</title>
+        <link rel="stylesheet" href="./styles/popup.css" />
+    </head>
+    <body style="border-radius: 10px">
+        <div class="header">
+            <h1>🎵 Top Tracks</h1>
+            <div class="subtitle">Your most listened songs</div>
+        </div>
 
-		<div class="tabs">
-			<button class="tab active" data-period="day">Today</button>
-			<button class="tab" data-period="week">This Week</button>
-			<button class="tab" data-period="month">This Month</button>
-			<button class="tab" data-period="year">This Year</button>
-			<button class="tab" data-period="all">All</button>
-		</div>
+        <div id="current-video">No Video Playing</div>
 
-		<div class="tracks-container" id="tracks-container">
-			<div class="loading">Loading your top tracks...</div>
-		</div>
+        <div class="tabs">
+            <button class="tab active" data-period="day">Today</button>
+            <button class="tab" data-period="week">This Week</button>
+            <button class="tab" data-period="month">This Month</button>
+            <button class="tab" data-period="year">This Year</button>
+            <button class="tab" data-period="all">All</button>
+        </div>
 
-		<button onclick="showDashboard()" id="open-dashboard" class="link"">
-			View All...
-		</button>
+        <div class="tracks-container" id="tracks-container">
+            <div class="loading">Loading your top tracks...</div>
+        </div>
 
-		<script src="scripts/popup.js"></script>
-	</body>
+        <button onclick="showDashboard()" id="open-dashboard" class="link">
+            View All...
+        </button>
+
+        <script src="scripts/popup.js"></script>
+    </body>
 </html>

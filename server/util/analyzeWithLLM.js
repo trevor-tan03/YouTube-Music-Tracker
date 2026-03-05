@@ -3,72 +3,84 @@ import { validateLLMOutput } from "./checkResponseFormat.js";
 
 // Initialize LM Studio client (uses OpenAI-compatible API)
 const lmStudio = new OpenAI({
-	baseURL: "http://localhost:1234/v1", // LM Studio default port
-	apiKey: "lm-studio", // LM Studio doesn't require a real API key
+  baseURL: "http://localhost:1234/v1", // LM Studio default port
+  apiKey: "lm-studio", // LM Studio doesn't require a real API key
 });
 
 export async function analyzeWithLLM(title, channel, description, genre) {
-	// Prepare the prompt for the LLM
-	const prompt = `Analyze this YouTube video and determine if it's a song/music content.
-  
-  Video Title: ${title}
-  Genre: ${genre}
-  Channel Name: ${channel}
-  Description: ${description || "No description provided"}
-  
-  When extracting the artist:
-  - Look for names which are repeated often
-  - Check the hashtags in the Other Info
-  - Consider the channel name
+  // Prepare the prompt for the LLM
+  const prompt = `
+You are a strict classifier. Your primary goal is to correctly say "NOT a song" when evidence is insufficient.
 
-  Please respond in JSON format with the following structure:
-  {
-    "isSong": boolean (true|false) depending on whether it's a song or not,
-    "confidence": number (0-1),
-    "reasoning": "brief explanation",
-    "extractedTitle": "the song title if it's a song, or null",
-    "extractedArtist": "the artist/band name if it's a song, or null",
-    "videoType": "one of: music_video, live_performance, cover, lyric_video, audio, official_audio, remix, or null if not a song"
-  }
-  
-  Consider it a song if it's:
-  - An official music video
-  - A live performance of a song
-  - A cover version
-  - A lyric video
-  - An audio-only upload of a song
-  - A remix or alternate version
-  
-  NOT a song if it's:
-  - A podcast
-  - A tutorial/educational video
-  - A vlog
-  - Commentary/review video
-  - Trailer or movie clip
-  - Gaming content
-  - Just background music in non-music content
-  - Doesn't include both an artist name and song title`;
+Step 1: Decide if this video is a song.
+Only classify as a song if there is CLEAR evidence of:
+- A specific song title AND
+- A specific artist/band name AND
+- The content is primarily music-focused
 
-	// Call the LLM API
-	const completion = await lmStudio.chat.completions.create({
-		model: "google/gemma-3-1b", // LM Studio uses whatever model is loaded
-		messages: [
-			{
-				role: "system",
-				content:
-					"You are a music classification assistant. Respond only with valid JSON.",
-			},
-			{
-				role: "user",
-				content: prompt,
-			},
-		],
-		temperature: 0.3, // Lower temperature for more consistent output
-		max_tokens: 500,
-	});
+If ANY of the above is missing or uncertain, classify it as NOT a song.
 
-	// Parse the LLM response
-	const responseText = completion.choices[0].message.content;
-	const result = validateLLMOutput(responseText);
-	return result;
+Step 2: ONLY IF it is a song, extract details.
+
+Video information:
+- Title: ${title}
+- Genre: ${genre}
+- Channel Name: ${channel}
+- Description: ${description || "No description provided"}
+
+Disqualifying signals (any of these => NOT a song):
+- Podcast, interview, vlog, tutorial, commentary, review
+- Gaming or stream content
+- Background music only
+- Ambiguous titles like "chill beats", "music to study to"
+- No clearly identifiable artist AND song title
+- The channel is not an artist or music-related channel
+
+Valid song types:
+- official music video
+- live performance
+- cover
+- lyric video
+- audio-only song
+- remix
+
+Respond ONLY in JSON:
+
+{
+  "isSong": boolean,
+  "confidence": number (0–1),
+  "reasoning": "short justification",
+  "extractedTitle": string | null,
+  "extractedArtist": string | null,
+  "videoType": "music_video" | "live_performance" | "cover" | "lyric_video" | "audio" | "official_audio" | "remix" | null
+}
+
+Rules:
+- If isSong is false, extractedTitle, extractedArtist, and videoType MUST be null.
+- Do NOT guess artist or title.
+- When uncertain, choose isSong = false.
+`;
+
+  // Call the LLM API
+  const completion = await lmStudio.chat.completions.create({
+    model: "google/gemma-3-1b", // LM Studio uses whatever model is loaded
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a music classification assistant. Respond only with valid JSON.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: 0.3, // Lower temperature for more consistent output
+    max_tokens: 500,
+  });
+
+  // Parse the LLM response
+  const responseText = completion.choices[0].message.content;
+  const result = validateLLMOutput(responseText);
+  return result;
 }

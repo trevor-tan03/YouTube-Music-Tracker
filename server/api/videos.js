@@ -1,116 +1,116 @@
 import { db } from "../database/database.js";
 
 export async function getVideos(req, res) {
-  try {
-    // Query params
-    const searchFilter = req.query.search || "";
-    const classification = req.query.classification; // song | video | unknown
-    const limit = parseInt(req.query.limit) || 50;
-    const offset = parseInt(req.query.offset) || 0;
-    const sortBy = req.query.sortBy || "recent";
-    const period = req.query.period; // day | week | month | year | all
+    try {
+        // Query params
+        const searchFilter = req.query.search || "";
+        const classification = req.query.classification; // song | video | unknown
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+        const sortBy = req.query.sortBy || "recent";
+        const period = req.query.period; // day | week | month | year | all
 
-    // ---------------------------------------------------------
-    // WHERE CLAUSE
-    // ---------------------------------------------------------
-    let whereConditions = [];
-    let params = [];
+        // ---------------------------------------------------------
+        // WHERE CLAUSE
+        // ---------------------------------------------------------
+        let whereConditions = [];
+        let params = [];
 
-    // Search
-    if (searchFilter) {
-      whereConditions.push("(v.title LIKE ? OR v.channel LIKE ?)");
-      params.push(`%${searchFilter}%`, `%${searchFilter}%`);
-    }
+        // Search
+        if (searchFilter) {
+            whereConditions.push("(v.title LIKE ? OR v.channel LIKE ?)");
+            params.push(`%${searchFilter}%`, `%${searchFilter}%`);
+        }
 
-    // Classification filter
-    if (classification === "song") {
-      whereConditions.push("v.is_song = 1");
-    } else if (classification === "video") {
-      whereConditions.push("v.is_song = 0");
-    } else if (classification === "unknown") {
-      whereConditions.push("v.is_song IS NULL");
-    }
+        // Classification filter
+        if (classification === "song") {
+            whereConditions.push("v.is_song = 1");
+        } else if (classification === "video") {
+            whereConditions.push("v.is_song = 0");
+        } else if (classification === "unknown") {
+            whereConditions.push("v.is_song IS NULL");
+        }
 
-    const whereClause =
-      whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : "";
+        const whereClause =
+            whereConditions.length > 0
+                ? `WHERE ${whereConditions.join(" AND ")}`
+                : "";
 
-    // ---------------------------------------------------------
-    // TIME PERIOD FILTER (for listening sessions)
-    // ---------------------------------------------------------
-    let periodFilter = "";
-    let havingClause = "";
+        // ---------------------------------------------------------
+        // TIME PERIOD FILTER (for listening sessions)
+        // ---------------------------------------------------------
+        let periodFilter = "";
+        let havingClause = "";
 
-    if (period) {
-      switch (period) {
-        case "day":
-          periodFilter = ` AND date(ls.started_at, 'unixepoch') = date('now')`;
-          break;
+        if (period) {
+            switch (period) {
+                case "day":
+                    periodFilter = ` AND date(ls.started_at, 'unixepoch') = date('now')`;
+                    break;
 
-        case "week":
-          periodFilter = `
+                case "week":
+                    periodFilter = `
             AND strftime('%W-%Y', ls.started_at, 'unixepoch') = strftime('%W-%Y', 'now')
           `;
-          break;
+                    break;
 
-        case "month":
-          periodFilter = `
+                case "month":
+                    periodFilter = `
             AND strftime('%m-%Y', ls.started_at, 'unixepoch') = strftime('%m-%Y', 'now')
           `;
-          break;
+                    break;
 
-        case "year":
-          periodFilter = `
+                case "year":
+                    periodFilter = `
             AND strftime('%Y', ls.started_at, 'unixepoch') = strftime('%Y', 'now')
           `;
-          break;
+                    break;
 
-        case "all":
-        default:
-          // no time filter
-          break;
-      }
+                case "all":
+                default:
+                    // no time filter
+                    break;
+            }
 
-      // When a period is specified, only include videos with listening time > 0
-      // This prevents videos with no plays in the period from appearing
-      if (period && period !== "all") {
-        havingClause = "HAVING IFNULL(SUM(ls.listening_time), 0) > 0";
-      }
-    }
+            // When a period is specified, only include videos with listening time > 0
+            // This prevents videos with no plays in the period from appearing
+            if (period && period !== "all") {
+                havingClause = "HAVING IFNULL(SUM(ls.listening_time), 0) > 0";
+            }
+        }
 
-    // ---------------------------------------------------------
-    // SORTING LOGIC
-    // ---------------------------------------------------------
-    let orderBy = "v.created_at ASC"; // default (recent)
+        // ---------------------------------------------------------
+        // SORTING LOGIC
+        // ---------------------------------------------------------
+        let orderBy = "v.created_at DESC"; // default (recent)
 
-    switch (sortBy) {
-      case "oldest":
-        orderBy = "v.created_at DESC";
-        break;
+        switch (sortBy) {
+            case "oldest":
+                orderBy = "v.created_at ASC";
+                break;
 
-      case "title":
-        orderBy = "v.title COLLATE NOCASE ASC";
-        break;
+            case "title":
+                orderBy = "v.title COLLATE NOCASE ASC";
+                break;
 
-      case "duration-desc":
-        orderBy = "v.duration DESC";
-        break;
+            case "duration-desc":
+                orderBy = "v.duration DESC";
+                break;
 
-      case "duration-asc":
-        orderBy = "v.duration ASC";
-        break;
+            case "duration-asc":
+                orderBy = "v.duration ASC";
+                break;
 
-      case "most-played":
-        orderBy = "total_listening_time DESC";
-        break;
-    }
+            case "most-played":
+                orderBy = "total_listening_time DESC";
+                break;
+        }
 
-    // ---------------------------------------------------------
-    // COUNT QUERY (with period filter)
-    // ---------------------------------------------------------
-    // When period is set, we need to count only videos with listening sessions in that period
-    const countQuery = `
+        // ---------------------------------------------------------
+        // COUNT QUERY (with period filter)
+        // ---------------------------------------------------------
+        // When period is set, we need to count only videos with listening sessions in that period
+        const countQuery = `
       SELECT COUNT(*) as total
       FROM (
         SELECT v.id
@@ -121,12 +121,12 @@ export async function getVideos(req, res) {
         ${havingClause}
       )
     `;
-    const total = db.prepare(countQuery).get(...params).total;
+        const total = db.prepare(countQuery).get(...params).total;
 
-    // ---------------------------------------------------------
-    // MAIN QUERY WITH LISTENING TIME AND PERIOD FILTER
-    // ---------------------------------------------------------
-    const query = `
+        // ---------------------------------------------------------
+        // MAIN QUERY WITH LISTENING TIME AND PERIOD FILTER
+        // ---------------------------------------------------------
+        const query = `
       SELECT
         v.*,
         IFNULL(SUM(ls.listening_time), 0) AS total_listening_time,
@@ -143,12 +143,12 @@ export async function getVideos(req, res) {
       LIMIT ? OFFSET ?
     `;
 
-    const videos = db.prepare(query).all(...params, limit, offset);
+        const videos = db.prepare(query).all(...params, limit, offset);
 
-    // ---------------------------------------------------------
-    // AGGREGATE STATS (total listening time for filtered results)
-    // ---------------------------------------------------------
-    const statsQuery = `
+        // ---------------------------------------------------------
+        // AGGREGATE STATS (total listening time for filtered results)
+        // ---------------------------------------------------------
+        const statsQuery = `
       SELECT
         COUNT(DISTINCT v.id) AS total_videos,
         IFNULL(SUM(ls.listening_time), 0) AS total_listening_time
@@ -157,26 +157,26 @@ export async function getVideos(req, res) {
       ${whereClause}
     `;
 
-    const stats = db.prepare(statsQuery).get(...params);
+        const stats = db.prepare(statsQuery).get(...params);
 
-    return res.status(200).json({
-      videos,
-      stats: {
-        totalVideos: stats.total_videos || 0,
-        totalListeningTime: stats.total_listening_time || 0,
-      },
-      pagination: {
-        total,
-        limit,
-        offset,
-        hasMore: offset + limit < total,
-        nextOffset: offset + limit < total ? offset + limit : null,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching videos:", error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
-  }
+        return res.status(200).json({
+            videos,
+            stats: {
+                totalVideos: stats.total_videos || 0,
+                totalListeningTime: stats.total_listening_time || 0,
+            },
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + limit < total,
+                nextOffset: offset + limit < total ? offset + limit : null,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching videos:", error);
+        return res.status(500).json({
+            error: "Internal server error",
+        });
+    }
 }

@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { analyseVideo } from "./api/analyse.js";
+import { artistRouter } from "./api/artist.js";
 import { classifySong } from "./api/classify.js";
 import { addSongListeningTime } from "./api/listen.js";
 import { getTopListens } from "./api/top-listens.js";
@@ -17,8 +18,9 @@ app.use("/analyse", analyseVideo);
 app.use("/top-listens", getTopListens);
 app.use("/classify", classifySong);
 app.use("/videos", getVideos);
+app.use("/artists", artistRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

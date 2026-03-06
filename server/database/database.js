@@ -58,7 +58,7 @@ db.prepare(
     `CREATE TABLE IF NOT EXISTS artist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,
-        started_at INTEGER DEFAULT (strftime('%s', 'now'))  -- Unix timestamp
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))  -- Unix timestamp
     )`,
 ).run();
 

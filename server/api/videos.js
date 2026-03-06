@@ -7,7 +7,7 @@ export async function getVideos(req, res) {
         const classification = req.query.classification; // song | video | unknown
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
-        const sortBy = req.query.sortBy || "recent";
+        const sortBy = req.query.sortBy;
         const period = req.query.period; // day | week | month | year | all
 
         // ---------------------------------------------------------
@@ -82,15 +82,24 @@ export async function getVideos(req, res) {
         // ---------------------------------------------------------
         // SORTING LOGIC
         // ---------------------------------------------------------
-        let orderBy = "v.created_at DESC"; // default (recent)
+        let orderBy; // default (recent)
 
         switch (sortBy) {
+            case "recent":
+                orderBy = "v.created_at DESC";
+                break;
+
             case "oldest":
                 orderBy = "v.created_at ASC";
                 break;
 
-            case "title":
-                orderBy = "v.title COLLATE NOCASE ASC";
+            case "last-played":
+                orderBy = `
+                    CASE 
+                        WHEN v.is_song = 1 THEN IFNULL(MAX(ls.started_at), 0)
+                        ELSE v.created_at
+                    END DESC
+                `;
                 break;
 
             case "duration-desc":
@@ -104,6 +113,14 @@ export async function getVideos(req, res) {
             case "most-played":
                 orderBy = "total_listening_time DESC";
                 break;
+
+            default:
+                orderBy = `
+                    CASE 
+                        WHEN v.is_song = 1 THEN IFNULL(MAX(ls.started_at), 0)
+                        ELSE v.created_at
+                    END DESC
+                `;
         }
 
         // ---------------------------------------------------------

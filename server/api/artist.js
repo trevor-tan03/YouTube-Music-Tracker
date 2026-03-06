@@ -3,7 +3,7 @@ import { db } from "../database/database.js";
 
 export const artistRouter = express.Router();
 
-artistRouter.get("/list", (req, res) => {
+artistRouter.get("/", (req, res) => {
     const artists = db.prepare(`SELECT * FROM artist`).all();
     res.json(artists);
 });

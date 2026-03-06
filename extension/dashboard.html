@@ -158,8 +158,11 @@
                         <div class="sort-group">
                             <label for="sort-by">Sort by:</label>
                             <select id="sort-by">
-                                <option value="recent">Most Recent</option>
-                                <option value="oldest">Oldest First</option>
+                                <option value="last-played">
+                                    Recently Played
+                                </option>
+                                <option value="recent">Recently Added</option>
+                                <option value="oldest">Oldest Added</option>
                                 <option value="most-played">Most Played</option>
                                 <option value="duration-desc">
                                     Longest Duration
@@ -167,7 +170,6 @@
                                 <option value="duration-asc">
                                     Shortest Duration
                                 </option>
-                                <option value="title">Title (A-Z)</option>
                             </select>
                         </div>
                     </div>
@@ -270,6 +272,41 @@
                             </div>
                         </div>
                     </label>
+                </div>
+
+                <!-- Artist Selection (only shown for songs) -->
+                <div
+                    id="artist-selection"
+                    style="display: none; margin-bottom: 24px"
+                >
+                    <label
+                        for="artist-select"
+                        style="
+                            display: block;
+                            margin-bottom: 8px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #88c0d0;
+                        "
+                    >
+                        Select Artist
+                    </label>
+                    <select
+                        id="artist-select"
+                        style="
+                            width: 100%;
+                            padding: 12px 16px;
+                            background: rgba(67, 76, 94, 0.4);
+                            border: 2px solid rgba(216, 222, 233, 0.1);
+                            color: #eceff4;
+                            font-size: 14px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        "
+                    >
+                        <option value="">Choose an artist...</option>
+                        <!-- Artists will be populated dynamically -->
+                    </select>
                 </div>
 
                 <div class="modal-actions">

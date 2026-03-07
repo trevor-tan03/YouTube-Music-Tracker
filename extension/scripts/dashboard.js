@@ -134,10 +134,33 @@ function setupSort() {
 }
 
 // Setup Modal
+// Setup Modal
 function setupModal() {
     const modal = document.getElementById("classification-modal");
     const cancelBtn = document.getElementById("modal-cancel");
     const saveBtn = document.getElementById("modal-save");
+    const classificationRadios = document.querySelectorAll(
+        'input[name="classification"]',
+    );
+    const artistSelection = document.getElementById("artist-selection");
+
+    // Add event listeners to radio buttons to show/hide artist selection
+    classificationRadios.forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+            if (e.target.value === "true") {
+                // Song selected - show artist dropdown
+                artistSelection.style.display = "block";
+            } else {
+                // Video selected - hide artist dropdown
+                artistSelection.style.display = "none";
+                // Clear artist selection when hidden
+                const artistSelect = document.getElementById("artist-select");
+                if (artistSelect) {
+                    artistSelect.value = "";
+                }
+            }
+        });
+    });
 
     cancelBtn.addEventListener("click", () => {
         closeModal();
@@ -158,6 +181,7 @@ function openModal(videoId, videoTitle, currentState) {
     currentClassifyingVideoId = videoId;
     const modal = document.getElementById("classification-modal");
     const titleElement = document.getElementById("modal-video-title");
+    const artistSelection = document.getElementById("artist-selection");
 
     titleElement.textContent = videoTitle;
 
@@ -174,13 +198,29 @@ function openModal(videoId, videoTitle, currentState) {
         }
     });
 
+    // Show/hide artist selection based on current state
+    if (currentState === true) {
+        artistSelection.style.display = "block";
+    } else {
+        artistSelection.style.display = "none";
+    }
+
     modal.classList.add("active");
 }
 
 function closeModal() {
     const modal = document.getElementById("classification-modal");
+    const artistSelection = document.getElementById("artist-selection");
+    const artistSelect = document.getElementById("artist-select");
+
     modal.classList.remove("active");
     currentClassifyingVideoId = null;
+
+    // Reset artist selection
+    artistSelection.style.display = "none";
+    if (artistSelect) {
+        artistSelect.value = "";
+    }
 }
 
 async function saveClassification() {
@@ -196,20 +236,37 @@ async function saveClassification() {
     const isSongValue =
         selectedRadio.value === "null" ? null : selectedRadio.value === "true";
 
+    // Validate artist selection if it's a song
+    const artistSelect = document.getElementById("artist-select");
+    if (
+        isSongValue === true &&
+        (!artistSelect.value || artistSelect.value === "")
+    ) {
+        alert("Please select an artist for this song");
+        return;
+    }
+
     const saveBtn = document.getElementById("modal-save");
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving...";
 
     try {
+        const requestBody = {
+            videoId: currentClassifyingVideoId,
+            isSong: isSongValue,
+        };
+
+        // Only include artistId if it's a song and an artist is selected
+        if (isSongValue === true && artistSelect.value) {
+            requestBody.artistId = artistSelect.value;
+        }
+
         const response = await fetch(`${API_ENDPOINT}/classify`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                videoId: currentClassifyingVideoId,
-                isSong: isSongValue,
-            }),
+            body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {

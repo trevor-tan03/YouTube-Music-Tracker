@@ -133,8 +133,6 @@ function setupSort() {
     });
 }
 
-// Setup Modal
-// Setup Modal
 function setupModal() {
     const modal = document.getElementById("classification-modal");
     const cancelBtn = document.getElementById("modal-cancel");
@@ -143,6 +141,11 @@ function setupModal() {
         'input[name="classification"]',
     );
     const artistSelection = document.getElementById("artist-selection");
+    const artistSelect = document.getElementById("artist-select");
+    const newArtistSection = document.getElementById("new-artist-section");
+    const newArtistInput = document.getElementById("new-artist-name");
+    const saveNewArtistBtn = document.getElementById("save-new-artist");
+    const cancelNewArtistBtn = document.getElementById("cancel-new-artist");
 
     // Add event listeners to radio buttons to show/hide artist selection
     classificationRadios.forEach((radio) => {
@@ -153,13 +156,61 @@ function setupModal() {
             } else {
                 // Video selected - hide artist dropdown
                 artistSelection.style.display = "none";
+                // Hide new artist section if open
+                newArtistSection.style.display = "none";
                 // Clear artist selection when hidden
-                const artistSelect = document.getElementById("artist-select");
                 if (artistSelect) {
                     artistSelect.value = "";
                 }
             }
         });
+    });
+
+    // Handle artist select change - show input if "Add New Artist" is selected
+    artistSelect.addEventListener("change", (e) => {
+        if (e.target.value === "__add_new__") {
+            newArtistSection.style.display = "block";
+            newArtistInput.focus();
+        } else {
+            newArtistSection.style.display = "none";
+        }
+    });
+
+    // Save new artist
+    saveNewArtistBtn.addEventListener("click", async () => {
+        const name = newArtistInput.value.trim();
+
+        if (!name) {
+            alert("Please enter an artist name");
+            newArtistInput.focus();
+            return;
+        }
+
+        saveNewArtistBtn.disabled = true;
+        saveNewArtistBtn.textContent = "Adding...";
+
+        try {
+            await addNewArtist(name);
+        } catch (error) {
+            // Error already handled in addNewArtist
+        } finally {
+            saveNewArtistBtn.disabled = false;
+            saveNewArtistBtn.textContent = "Add";
+        }
+    });
+
+    // Cancel new artist
+    cancelNewArtistBtn.addEventListener("click", () => {
+        newArtistSection.style.display = "none";
+        newArtistInput.value = "";
+        artistSelect.value = "";
+    });
+
+    // Allow Enter key to save new artist
+    newArtistInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            saveNewArtistBtn.click();
+        }
     });
 
     cancelBtn.addEventListener("click", () => {
@@ -214,12 +265,16 @@ function closeModal() {
     const modal = document.getElementById("classification-modal");
     const artistSelection = document.getElementById("artist-selection");
     const artistSelect = document.getElementById("artist-select");
+    const newArtistSection = document.getElementById("new-artist-section");
+    const newArtistInput = document.getElementById("new-artist-name");
 
     modal.classList.remove("active");
     currentClassifyingVideoId = null;
 
     // Reset artist selection
     artistSelection.style.display = "none";
+    newArtistSection.style.display = "none";
+    newArtistInput.value = "";
     if (artistSelect) {
         artistSelect.value = "";
     }
@@ -429,7 +484,7 @@ function renderTracks() {
             <div class="dashboard-track-title">${escapeHtml(track.title)}</div>
             <div class="dashboard-track-channel">${escapeHtml(track.channel)}</div>
             <div class="dashboard-track-stats">
-                <span>⏱️ ${formatTime(track.total_listening_time)}</span>
+                <span>🎧 ${formatTime(track.total_listening_time)}</span>
                 <span>▶️ ${Math.round(track.total_listening_time / track.duration)} plays</span>
                 <button class="setting-btn" data-video-id="${track.id}" data-title="${escapeHtml(track.title)}" data-is-song="${track.is_song}">⚙️</button>
             </div>
@@ -939,6 +994,14 @@ async function fetchAndPopulateArtists() {
         artistSelect.innerHTML =
             '<option value="">Choose an artist...</option>';
 
+        // Add "Add New Artist" option
+        const addNewOption = document.createElement("option");
+        addNewOption.value = "__add_new__";
+        addNewOption.textContent = "+ Add New Artist";
+        addNewOption.style.fontWeight = "600";
+        addNewOption.style.color = "#88c0d0";
+        artistSelect.appendChild(addNewOption);
+
         // Populate with artists
         artists.forEach((artist) => {
             const option = document.createElement("option");
@@ -950,5 +1013,40 @@ async function fetchAndPopulateArtists() {
         console.error("Error fetching artists:", error);
         artistSelect.innerHTML =
             '<option value="">Error loading artists</option>';
+    }
+}
+
+async function addNewArtist(name) {
+    try {
+        const response = await fetch(`${API_ENDPOINT}/artists/add`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: name.trim() }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to add artist");
+        }
+
+        const newArtist = await response.json();
+
+        // Refresh the artists list
+        await fetchAndPopulateArtists();
+
+        // Select the newly added artist
+        const artistSelect = document.getElementById("artist-select");
+        artistSelect.value = newArtist.id;
+
+        // Hide the new artist input section
+        document.getElementById("new-artist-section").style.display = "none";
+        document.getElementById("new-artist-name").value = "";
+
+        return newArtist;
+    } catch (error) {
+        console.error("Error adding new artist:", error);
+        alert("Failed to add artist. Please try again.");
+        throw error;
     }
 }

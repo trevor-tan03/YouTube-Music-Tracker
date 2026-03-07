@@ -307,6 +307,48 @@
                         <option value="">Choose an artist...</option>
                         <!-- Artists will be populated dynamically -->
                     </select>
+
+                    <!-- Add new artist section (hidden by default) -->
+                    <div
+                        id="new-artist-section"
+                        style="display: none; margin-top: 12px"
+                    >
+                        <div style="display: flex; gap: 8px">
+                            <input
+                                type="text"
+                                id="new-artist-name"
+                                placeholder="Enter artist name..."
+                                style="
+                                    flex: 1;
+                                    padding: 10px 14px;
+                                    background: rgba(67, 76, 94, 0.4);
+                                    border: 2px solid rgba(216, 222, 233, 0.1);
+                                    color: #eceff4;
+                                    font-size: 14px;
+                                    transition: all 0.2s;
+                                "
+                            />
+                            <button
+                                id="save-new-artist"
+                                class="modal-btn"
+                                style="
+                                    background: #88c0d0;
+                                    color: #2e3440;
+                                    padding: 10px 20px;
+                                    white-space: nowrap;
+                                "
+                            >
+                                Add
+                            </button>
+                            <button
+                                id="cancel-new-artist"
+                                class="modal-btn modal-btn-cancel"
+                                style="padding: 10px 20px"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-actions">

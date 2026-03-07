@@ -651,3 +651,8 @@ body {
         padding: 20px;
     }
 }
+
+#artist-select > option {
+    background: #2e3440;
+    color: #d8dee9;
+}

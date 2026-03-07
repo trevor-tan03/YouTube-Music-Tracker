@@ -177,13 +177,15 @@ function setupModal() {
     });
 }
 
-function openModal(videoId, videoTitle, currentState) {
+async function openModal(videoId, videoTitle, currentState) {
     currentClassifyingVideoId = videoId;
     const modal = document.getElementById("classification-modal");
     const titleElement = document.getElementById("modal-video-title");
     const artistSelection = document.getElementById("artist-selection");
 
     titleElement.textContent = videoTitle;
+
+    await fetchAndPopulateArtists();
 
     // Set the current classification state
     const radioButtons = document.querySelectorAll(
@@ -454,12 +456,12 @@ function renderTracks() {
 
     // Add click handlers for settings buttons
     container.querySelectorAll(".setting-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const videoId = btn.dataset.videoId;
             const title = btn.dataset.title;
             const isSong = Boolean(Number(btn.dataset.isSong));
-            openModal(videoId, title, isSong);
+            await openModal(videoId, title, isSong);
         });
     });
 }
@@ -808,12 +810,12 @@ function renderVideos() {
 
     // Add click handlers for classify buttons
     container.querySelectorAll(".classify-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const videoId = btn.dataset.videoId;
             const title = btn.dataset.title;
             const isSong = Boolean(Number(btn.dataset.currentState));
-            openModal(videoId, title, isSong);
+            await openModal(videoId, title, isSong);
         });
     });
 }
@@ -916,5 +918,37 @@ function formatDate(dateString) {
         return `${Math.floor(diffDays / 30)}mo ago`;
     } else {
         return `${Math.floor(diffDays / 365)}y ago`;
+    }
+}
+
+async function fetchAndPopulateArtists() {
+    const artistSelect = document.getElementById("artist-select");
+
+    if (!artistSelect) return;
+
+    try {
+        const response = await fetch(`${API_ENDPOINT}/artists`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch artists");
+        }
+
+        const artists = await response.json();
+
+        // Clear existing options except the first placeholder
+        artistSelect.innerHTML =
+            '<option value="">Choose an artist...</option>';
+
+        // Populate with artists
+        artists.forEach((artist) => {
+            const option = document.createElement("option");
+            option.value = artist.id;
+            option.textContent = artist.name;
+            artistSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error fetching artists:", error);
+        artistSelect.innerHTML =
+            '<option value="">Error loading artists</option>';
     }
 }

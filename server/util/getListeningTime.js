@@ -12,7 +12,7 @@ if period is "all", return the listening time for all time
 if period is not provided, return the listening time for the current day
 */
 export async function getTopListensInPeriod(period) {
-	let query = `
+    let query = `
 	SELECT 
 		v.id as video_id,
 		v.title,
@@ -20,47 +20,49 @@ export async function getTopListensInPeriod(period) {
 		v.duration,
 		v.thumbnail_url,
         v.is_song,
+        ast.artist_id,
 		SUM(ls.listening_time) as total_listening_time
 	FROM listening_session ls
 	JOIN video v ON ls.video_id = v.id
+	LEFT JOIN artist_song ast ON v.id = ast.video_id
 	WHERE 1=1 AND v.is_song = 1
 `;
 
-	switch (period) {
-		case "day":
-			query += ` AND date(ls.started_at, 'unixepoch') = date('now')`;
-			break;
+    switch (period) {
+        case "day":
+            query += ` AND date(ls.started_at, 'unixepoch') = date('now')`;
+            break;
 
-		case "week":
-			query += `
+        case "week":
+            query += `
 			AND strftime('%W-%Y', ls.started_at, 'unixepoch') = strftime('%W-%Y', 'now')
 		`;
-			break;
+            break;
 
-		case "month":
-			query += `
+        case "month":
+            query += `
 			AND strftime('%m-%Y', ls.started_at, 'unixepoch') = strftime('%m-%Y', 'now')
 		`;
-			break;
+            break;
 
-		case "year":
-			query += `
+        case "year":
+            query += `
 			AND strftime('%Y', ls.started_at, 'unixepoch') = strftime('%Y', 'now')
 		`;
-			break;
+            break;
 
-		case "all":
-		default:
-			// no time filter
-			break;
-	}
+        case "all":
+        default:
+            // no time filter
+            break;
+    }
 
-	query += `
+    query += `
 	GROUP BY v.id
 	ORDER BY total_listening_time DESC
 	LIMIT 10
 `;
 
-	const rows = db.prepare(query).all();
-	return rows;
+    const rows = db.prepare(query).all();
+    return rows;
 }

@@ -228,7 +228,12 @@ function setupModal() {
     });
 }
 
-async function openModal(videoId, videoTitle, currentState) {
+async function openModal(
+    videoId,
+    videoTitle,
+    currentState,
+    currentArtistId = null,
+) {
     currentClassifyingVideoId = videoId;
     const modal = document.getElementById("classification-modal");
     const titleElement = document.getElementById("modal-video-title");
@@ -256,6 +261,14 @@ async function openModal(videoId, videoTitle, currentState) {
         artistSelection.style.display = "block";
     } else {
         artistSelection.style.display = "none";
+    }
+
+    // Pre-select the current artist if one is mapped to this video.
+    // Must happen after fetchAndPopulateArtists() has built the <select> options,
+    // and value must be a string to match the option values.
+    const artistSelect = document.getElementById("artist-select");
+    if (artistSelect && currentArtistId) {
+        artistSelect.value = String(currentArtistId);
     }
 
     modal.classList.add("active");
@@ -328,6 +341,24 @@ async function saveClassification() {
 
         if (!response.ok) {
             throw new Error("Classification failed");
+        }
+
+        // If classified as a song with an artist, map the artist to the video
+        if (isSongValue === true && artistSelect.value) {
+            const mapResponse = await fetch(`${API_ENDPOINT}/artists/map`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    artistId: artistSelect.value,
+                    videoId: currentClassifyingVideoId,
+                }),
+            });
+
+            if (!mapResponse.ok) {
+                console.error("Failed to map artist to video");
+            }
         }
 
         // Update local data
@@ -486,7 +517,7 @@ function renderTracks() {
             <div class="dashboard-track-stats">
                 <span>🎧 ${formatTime(track.total_listening_time)}</span>
                 <span>▶️ ${Math.round(track.total_listening_time / track.duration)} plays</span>
-                <button class="setting-btn" data-video-id="${track.id}" data-title="${escapeHtml(track.title)}" data-is-song="${track.is_song}">⚙️</button>
+                <button class="setting-btn" data-video-id="${track.id}" data-title="${escapeHtml(track.title)}" data-is-song="${track.is_song}" data-artist-id="${track.artist_id ?? ""}">⚙️</button>
             </div>
         </div>
     `,
@@ -516,7 +547,8 @@ function renderTracks() {
             const videoId = btn.dataset.videoId;
             const title = btn.dataset.title;
             const isSong = Boolean(Number(btn.dataset.isSong));
-            await openModal(videoId, title, isSong);
+            const artistId = btn.dataset.artistId || null;
+            await openModal(videoId, title, isSong, artistId);
         });
     });
 }
@@ -826,6 +858,7 @@ function renderVideos() {
                         data-video-id="${video.id}"
                         data-video-title="${escapeHtml(video.title)}"
                         data-current-state="${video.is_song}"
+                        data-artist-id="${video.artist_id ?? ""}"
                     >
                         🏷️ Classify
                     </button>
@@ -868,9 +901,10 @@ function renderVideos() {
         btn.addEventListener("click", async (e) => {
             e.stopPropagation();
             const videoId = btn.dataset.videoId;
-            const title = btn.dataset.title;
+            const title = btn.dataset.videoTitle;
             const isSong = Boolean(Number(btn.dataset.currentState));
-            await openModal(videoId, title, isSong);
+            const artistId = btn.dataset.artistId || null;
+            await openModal(videoId, title, isSong, artistId);
         });
     });
 }

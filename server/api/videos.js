@@ -146,6 +146,7 @@ export async function getVideos(req, res) {
         const query = `
       SELECT
         v.*,
+        ast.artist_id,
         IFNULL(SUM(ls.listening_time), 0) AS total_listening_time,
         CASE
           WHEN v.duration > 0 THEN CAST(SUM(ls.listening_time) / v.duration AS FLOAT)
@@ -153,6 +154,7 @@ export async function getVideos(req, res) {
         END AS play_count
       FROM video v
       LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+      LEFT JOIN artist_song ast ON ast.video_id = v.id
       ${whereClause}
       GROUP BY v.id
       ${havingClause}

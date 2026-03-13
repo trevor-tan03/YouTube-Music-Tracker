@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { analyseVideo } from "./api/analyse.js";
-import { artistRouter } from "./api/artist.js";
+import { artistRouter } from "./api/artists.js";
 import { classifySong } from "./api/classify.js";
 import { addSongListeningTime } from "./api/listen.js";
 import { getTopListens } from "./api/top-listens.js";

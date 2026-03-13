@@ -64,9 +64,8 @@ db.prepare(
 
 db.prepare(
     `CREATE TABLE IF NOT EXISTS artist_song (
+    video_id TEXT NOT NULL PRIMARY KEY,
     artist_id INTEGER NOT NULL,
-    video_id INTEGER NOT NULL,
-    PRIMARY KEY (artist_id, video_id),
     FOREIGN KEY (artist_id) REFERENCES artist(id) ON DELETE CASCADE,
     FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE
 );`,

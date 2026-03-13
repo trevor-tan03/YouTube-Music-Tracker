@@ -41,22 +41,18 @@ artistRouter.post("/map", (req, res) => {
     if (!artist) {
         return res.status(404).json({ error: "Artist not found" });
     }
-    const video = db.prepare(`SELECT * FROM video WHERE id = ?`).get(videoId);
+
+    const video = db.prepare(`SELECT id FROM video WHERE id = ?`).get(videoId);
     if (!video) {
         return res.status(404).json({ error: "Video not found" });
     }
 
     try {
         db.prepare(
-            `INSERT INTO artist_song (artist_id, video_id) VALUES (?, ?)`,
-        ).run(artist.id, videoId);
+            `INSERT OR REPLACE INTO artist_song (video_id, artist_id) VALUES (?, ?)`,
+        ).run(videoId, artist.id);
         res.json({ message: "Artist mapped to video successfully" });
     } catch (err) {
-        if (err.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
-            return res
-                .status(400)
-                .json({ error: "This artist is already mapped to this video" });
-        }
         res.status(500).json({
             error: "An error occurred while mapping artist to video",
         });

@@ -68,3 +68,21 @@ artistRouter.delete("/delete/:id", (req, res) => {
     db.prepare(`DELETE FROM artist WHERE id = ?`).run(id);
     res.json({ message: "Artist deleted successfully" });
 });
+
+artistRouter.get("/most-listened", (req, res) => {
+    const artists = db
+        .prepare(
+            `SELECT 
+            a.id AS artist_id,  
+            a.name AS artist_name,
+            SUM(ls.listening_time) / 3600.0 AS total_listening_time
+            FROM video v
+            JOIN artist_song asg ON v.id = asg.video_id
+            JOIN artist a ON asg.artist_id = a.id
+            JOIN listening_session ls ON v.id = ls.video_id
+            GROUP BY a.id, a.name
+            ORDER BY SUM(ls.listening_time) DESC`,
+        )
+        .all();
+    res.json(artists);
+});

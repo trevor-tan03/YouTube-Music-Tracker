@@ -656,3 +656,25 @@ body {
     background: #2e3440;
     color: #d8dee9;
 }
+
+#artist-filter {
+    padding: 8px 14px;
+    border: 2px solid rgba(67, 76, 94, 0.5);
+    font-size: 13px;
+    cursor: pointer;
+    background: rgba(46, 52, 64, 0.5);
+    color: #eceff4;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#artist-filter:focus {
+    outline: none;
+    border-color: #88c0d0;
+    background: rgba(46, 52, 64, 0.7);
+}
+
+#artist-filter option {
+    background: #2e3440;
+    color: #d8dee9;
+}

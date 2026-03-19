@@ -9,6 +9,7 @@ export async function getVideos(req, res) {
         const offset = parseInt(req.query.offset) || 0;
         const sortBy = req.query.sortBy;
         const period = req.query.period; // day | week | month | year | all
+        const artistId = req.query.artistId || null;
 
         // ---------------------------------------------------------
         // WHERE CLAUSE
@@ -21,6 +22,16 @@ export async function getVideos(req, res) {
             whereConditions.push("(v.title LIKE ? OR v.channel LIKE ?)");
             params.push(`%${searchFilter}%`, `%${searchFilter}%`);
         }
+
+        // Artist filter
+        if (artistId) {
+            whereConditions.push("ast.artist_id = ?");
+            params.push(artistId);
+        }
+
+        const artistJoin = artistId
+            ? "INNER JOIN artist_song ast ON ast.video_id = v.id"
+            : "LEFT JOIN artist_song ast ON ast.video_id = v.id";
 
         // Classification filter
         if (classification === "song") {
@@ -50,30 +61,27 @@ export async function getVideos(req, res) {
 
                 case "week":
                     periodFilter = `
-            AND strftime('%W-%Y', ls.started_at, 'unixepoch') = strftime('%W-%Y', 'now')
-          `;
+                        AND strftime('%W-%Y', ls.started_at, 'unixepoch') = strftime('%W-%Y', 'now')
+                    `;
                     break;
 
                 case "month":
                     periodFilter = `
-            AND strftime('%m-%Y', ls.started_at, 'unixepoch') = strftime('%m-%Y', 'now')
-          `;
+                        AND strftime('%m-%Y', ls.started_at, 'unixepoch') = strftime('%m-%Y', 'now')
+                    `;
                     break;
 
                 case "year":
                     periodFilter = `
-            AND strftime('%Y', ls.started_at, 'unixepoch') = strftime('%Y', 'now')
-          `;
+                        AND strftime('%Y', ls.started_at, 'unixepoch') = strftime('%Y', 'now')
+                    `;
                     break;
 
                 case "all":
                 default:
-                    // no time filter
                     break;
             }
 
-            // When a period is specified, only include videos with listening time > 0
-            // This prevents videos with no plays in the period from appearing
             if (period && period !== "all") {
                 havingClause = "HAVING IFNULL(SUM(ls.listening_time), 0) > 0";
             }
@@ -82,7 +90,7 @@ export async function getVideos(req, res) {
         // ---------------------------------------------------------
         // SORTING LOGIC
         // ---------------------------------------------------------
-        let orderBy; // default (recent)
+        let orderBy;
 
         switch (sortBy) {
             case "recent":
@@ -95,7 +103,7 @@ export async function getVideos(req, res) {
 
             case "last-played":
                 orderBy = `
-                    CASE 
+                    CASE
                         WHEN v.is_song = 1 THEN IFNULL(MAX(ls.started_at), 0)
                         ELSE v.created_at
                     END DESC
@@ -116,7 +124,7 @@ export async function getVideos(req, res) {
 
             default:
                 orderBy = `
-                    CASE 
+                    CASE
                         WHEN v.is_song = 1 THEN IFNULL(MAX(ls.started_at), 0)
                         ELSE v.created_at
                     END DESC
@@ -124,59 +132,58 @@ export async function getVideos(req, res) {
         }
 
         // ---------------------------------------------------------
-        // COUNT QUERY (with period filter)
+        // COUNT QUERY
         // ---------------------------------------------------------
-        // When period is set, we need to count only videos with listening sessions in that period
         const countQuery = `
-      SELECT COUNT(*) as total
-      FROM (
-        SELECT v.id
-        FROM video v
-        LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
-        ${whereClause}
-        GROUP BY v.id
-        ${havingClause}
-      )
-    `;
-        const total = db.prepare(countQuery).get(...params).total;
+            SELECT COUNT(*) as total
+            FROM (
+                SELECT v.id
+                FROM video v
+                ${artistJoin}
+                LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+                ${whereClause}
+                GROUP BY v.id
+                ${havingClause}
+            )
+        `;
+        const total = db.prepare(countQuery).get(params).total;
 
         // ---------------------------------------------------------
-        // MAIN QUERY WITH LISTENING TIME AND PERIOD FILTER
+        // MAIN QUERY
         // ---------------------------------------------------------
         const query = `
-      SELECT
-        v.*,
-        ast.artist_id,
-        IFNULL(SUM(ls.listening_time), 0) AS total_listening_time,
-        CASE
-          WHEN v.duration > 0 THEN CAST(SUM(ls.listening_time) / v.duration AS FLOAT)
-          ELSE 0
-        END AS play_count
-      FROM video v
-      LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
-      LEFT JOIN artist_song ast ON ast.video_id = v.id
-      ${whereClause}
-      GROUP BY v.id
-      ${havingClause}
-      ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
-    `;
-
-        const videos = db.prepare(query).all(...params, limit, offset);
+            SELECT
+                v.*,
+                ast.artist_id,
+                IFNULL(SUM(ls.listening_time), 0) AS total_listening_time,
+                CASE
+                    WHEN v.duration > 0 THEN CAST(SUM(ls.listening_time) / v.duration AS FLOAT)
+                    ELSE 0
+                END AS play_count
+            FROM video v
+            ${artistJoin}
+            LEFT JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+            ${whereClause}
+            GROUP BY v.id
+            ${havingClause}
+            ORDER BY ${orderBy}
+            LIMIT ? OFFSET ?
+        `;
+        const videos = db.prepare(query).all([...params, limit, offset]);
 
         // ---------------------------------------------------------
-        // AGGREGATE STATS (total listening time for filtered results)
+        // AGGREGATE STATS
         // ---------------------------------------------------------
         const statsQuery = `
-      SELECT
-        COUNT(DISTINCT v.id) AS total_videos,
-        IFNULL(SUM(ls.listening_time), 0) AS total_listening_time
-      FROM video v
-      INNER JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
-      ${whereClause}
-    `;
-
-        const stats = db.prepare(statsQuery).get(...params);
+            SELECT
+                COUNT(DISTINCT v.id) AS total_videos,
+                IFNULL(SUM(ls.listening_time), 0) AS total_listening_time
+            FROM video v
+            ${artistJoin}
+            INNER JOIN listening_session ls ON ls.video_id = v.id${periodFilter}
+            ${whereClause}
+        `;
+        const stats = db.prepare(statsQuery).get(params);
 
         return res.status(200).json({
             videos,

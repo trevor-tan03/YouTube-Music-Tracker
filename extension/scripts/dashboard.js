@@ -19,6 +19,7 @@ let scrollObserver = null;
 let videosContainer = null;
 let tracksContainer = null;
 let tracksScrollObserver = null;
+let currentArtistFilter = "";
 
 const API_ENDPOINT = "http://localhost:3000";
 
@@ -34,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInfiniteScroll();
     setupTracksInfiniteScroll(); // Setup infinite scroll for tracks
     loadTopTracks();
+    setupArtistFilter();
 });
 
 // Main navigation tabs
@@ -450,6 +452,10 @@ async function fetchTracks(isInitial) {
         limit: TRACKS_PER_PAGE.toString(),
         offset: currentTracksOffset.toString(),
     });
+
+    if (currentArtistFilter) {
+        params.append("artistId", currentArtistFilter);
+    }
 
     // Add search parameter if present
     if (currentTracksSearch) {
@@ -1083,4 +1089,37 @@ async function addNewArtist(name) {
         alert("Failed to add artist. Please try again.");
         throw error;
     }
+}
+
+async function populateArtistFilter() {
+    const select = document.getElementById("artist-filter");
+    if (!select) return;
+
+    try {
+        const response = await fetch(`${API_ENDPOINT}/artists`);
+        if (!response.ok) throw new Error("Failed to fetch artists");
+        const artists = await response.json();
+
+        select.innerHTML = '<option value="">All artists</option>';
+        artists.forEach((artist) => {
+            const option = document.createElement("option");
+            option.value = artist.id;
+            option.textContent = artist.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error fetching artists:", error);
+    }
+}
+
+function setupArtistFilter() {
+    const select = document.getElementById("artist-filter");
+    if (!select) return;
+
+    populateArtistFilter();
+
+    select.addEventListener("change", (e) => {
+        currentArtistFilter = e.target.value;
+        loadTopTracks();
+    });
 }

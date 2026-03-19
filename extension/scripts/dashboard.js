@@ -64,6 +64,8 @@ function switchView(view) {
         loadAllVideos();
     } else if (view === "stats") {
         loadStatistics();
+    } else if (view === "artists") {
+        loadArtists();
     }
 }
 
@@ -1122,4 +1124,49 @@ function setupArtistFilter() {
         currentArtistFilter = e.target.value;
         loadTopTracks();
     });
+}
+
+async function loadArtists() {
+    const container = document.getElementById("artists-container");
+    container.innerHTML = '<div class="loading">Loading artists...</div>';
+
+    try {
+        const response = await fetch(`${API_ENDPOINT}/artists/most-listened`);
+        if (!response.ok) throw new Error("Failed to load artists");
+        const artists = await response.json();
+        renderArtists(artists);
+    } catch (error) {
+        console.error("Error loading artists:", error);
+        container.innerHTML =
+            '<div class="empty-state">Failed to load artists.</div>';
+    }
+}
+
+function renderArtists(artists) {
+    const container = document.getElementById("artists-container");
+
+    if (!artists || artists.length === 0) {
+        container.innerHTML =
+            '<div class="empty-state">No artists found.</div>';
+        return;
+    }
+
+    container.innerHTML = artists
+        .map(
+            (artist, index) => `
+        <div class="dashboard-video-card" style="cursor: default;">
+            <div class="dashboard-track-rank" style="position: static; width: 36px; height: 36px; flex-shrink: 0;">
+                #${index + 1}
+            </div>
+            <div class="dashboard-video-info">
+                <div class="dashboard-video-title" style="cursor: default;">${escapeHtml(artist.artist_name)}</div>
+                <div class="dashboard-video-meta">
+                    <span>🎵 ${artist.song_count} song${artist.song_count !== 1 ? "s" : ""}</span>
+                    <span>🎧 ${formatTime(artist.total_listening_time * 3600)}</span>
+                </div>
+            </div>
+        </div>
+    `,
+        )
+        .join("");
 }

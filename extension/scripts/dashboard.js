@@ -1,5 +1,6 @@
 let currentView = "top-tracks";
-let currentPeriod = "day";
+let currentTrackPeriod = "day";
+let currentArtistPeriod = "day";
 let currentFilter = "all";
 let currentSort = "recently-added";
 let currentTracksSearch = ""; // New: search term for top tracks
@@ -74,9 +75,6 @@ function setupPeriodTabs() {
     const tabs = document.querySelectorAll(".tab[data-period]");
     tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
-            currentPeriod = tab.dataset.period;
-
-            // Only update active state for tabs in the same view section
             const parentTabs = tab.closest(".tabs");
             parentTabs.querySelectorAll(".tab[data-period]").forEach((t) => {
                 t.classList.remove("active");
@@ -84,8 +82,10 @@ function setupPeriodTabs() {
             tab.classList.add("active");
 
             if (currentView === "top-tracks") {
+                currentTrackPeriod = tab.dataset.period;
                 loadTopTracks();
             } else if (currentView === "artists") {
+                currentArtistPeriod = tab.dataset.period;
                 loadArtists();
             }
         });
@@ -458,7 +458,7 @@ async function fetchTracks(isInitial) {
     const params = new URLSearchParams({
         classification: "song",
         sortBy: "most-played",
-        period: currentPeriod,
+        period: currentTrackPeriod,
         limit: TRACKS_PER_PAGE.toString(),
         offset: currentTracksOffset.toString(),
     });
@@ -1184,7 +1184,7 @@ async function loadArtists() {
     container.innerHTML = '<div class="loading">Loading artists...</div>';
 
     try {
-        const params = new URLSearchParams({ period: currentPeriod });
+        const params = new URLSearchParams({ period: currentArtistPeriod });
         const response = await fetch(
             `${API_ENDPOINT}/artists/most-listened?${params}`,
         );

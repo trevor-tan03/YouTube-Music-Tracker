@@ -75,11 +75,19 @@ function setupPeriodTabs() {
     tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
             currentPeriod = tab.dataset.period;
-            document
-                .querySelectorAll(".tab[data-period]")
-                .forEach((t) => t.classList.remove("active"));
+
+            // Only update active state for tabs in the same view section
+            const parentTabs = tab.closest(".tabs");
+            parentTabs.querySelectorAll(".tab[data-period]").forEach((t) => {
+                t.classList.remove("active");
+            });
             tab.classList.add("active");
-            loadTopTracks();
+
+            if (currentView === "top-tracks") {
+                loadTopTracks();
+            } else if (currentView === "artists") {
+                loadArtists();
+            }
         });
     });
 }
@@ -1169,4 +1177,23 @@ function renderArtists(artists) {
     `,
         )
         .join("");
+}
+
+async function loadArtists() {
+    const container = document.getElementById("artists-container");
+    container.innerHTML = '<div class="loading">Loading artists...</div>';
+
+    try {
+        const params = new URLSearchParams({ period: currentPeriod });
+        const response = await fetch(
+            `${API_ENDPOINT}/artists/most-listened?${params}`,
+        );
+        if (!response.ok) throw new Error("Failed to load artists");
+        const artists = await response.json();
+        renderArtists(artists);
+    } catch (error) {
+        console.error("Error loading artists:", error);
+        container.innerHTML =
+            '<div class="empty-state">Failed to load artists.</div>';
+    }
 }

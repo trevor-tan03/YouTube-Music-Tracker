@@ -193,6 +193,22 @@
             <section id="artists-view" class="dashboard-view">
                 <div class="view-section">
                     <h2 class="section-title">Artists</h2>
+                    <!-- Artists View -->
+                    <div class="tabs">
+                        <button class="tab active" data-period="day">
+                            Today
+                        </button>
+                        <button class="tab" data-period="week">
+                            This Week
+                        </button>
+                        <button class="tab" data-period="month">
+                            This Month
+                        </button>
+                        <button class="tab" data-period="year">
+                            This Year
+                        </button>
+                        <button class="tab" data-period="all">All Time</button>
+                    </div>
                 </div>
                 <div class="dashboard-content">
                     <div id="artists-container"></div>
@@ -205,45 +221,7 @@
                     <h2 class="section-title">Your Listening Statistics</h2>
                 </div>
 
-                <div class="dashboard-content">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">🎵</div>
-                            <div class="stat-value" id="stat-total-songs">
-                                -
-                            </div>
-                            <div class="stat-label">Total Songs</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon">⏱️</div>
-                            <div class="stat-value" id="stat-listening-time">
-                                -
-                            </div>
-                            <div class="stat-label">Listening Time</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon">▶️</div>
-                            <div class="stat-value" id="stat-total-plays">
-                                -
-                            </div>
-                            <div class="stat-label">Total Plays</div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon">📹</div>
-                            <div class="stat-value" id="stat-total-videos">
-                                -
-                            </div>
-                            <div class="stat-label">Total Videos</div>
-                        </div>
-                    </div>
-
-                    <div class="loading" id="stats-loading">
-                        Loading statistics...
-                    </div>
-                </div>
+                <div class="dashboard-content"></div>
             </section>
         </div>
 

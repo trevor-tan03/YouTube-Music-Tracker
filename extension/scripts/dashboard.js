@@ -1152,6 +1152,9 @@ async function loadArtists() {
 
 function renderArtists(artists) {
     const container = document.getElementById("artists-container");
+    artists_total_listening_time = artists
+        .map((a) => a.total_listening_time)
+        .reduce((a, b) => a + b, 0);
 
     if (!artists || artists.length === 0) {
         container.innerHTML =
@@ -1171,6 +1174,7 @@ function renderArtists(artists) {
                 <div class="dashboard-video-meta">
                     <span>🎵 ${artist.song_count} song${artist.song_count !== 1 ? "s" : ""}</span>
                     <span>🎧 ${formatTime(artist.total_listening_time * 3600)}</span>
+                    <span>⏱️ ${Math.round((artist.total_listening_time / artists_total_listening_time) * 100)}% of your listening time</span>
                 </div>
             </div>
         </div>

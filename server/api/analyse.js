@@ -166,14 +166,17 @@ function registerVideo(details, isSong) {
 }
 
 function searchAgainstExistingArtists(details) {
-    const artists = db.prepare("SELECT * FROM artist").all();
+    const artists = db
+        .prepare("SELECT * FROM artist ORDER BY LENGTH(name) DESC")
+        .all();
+
     for (const artist of artists) {
-        const nameMatch = details.title
-            .toLowerCase()
-            .includes(artist.name.toLowerCase());
-        const channelMatch = details.channel
-            .toLowerCase()
-            .includes(artist.name.toLowerCase());
+        const escaped = artist.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const wordBoundary = new RegExp(`\\b${escaped}\\b`, "i");
+
+        const nameMatch = wordBoundary.test(details.title);
+        const channelMatch =
+            details.channel.toLowerCase() === artist.name.toLowerCase();
 
         if (nameMatch || channelMatch) {
             console.log(

@@ -149,10 +149,42 @@ function registerVideo(details, isSong) {
         db.prepare(
             "INSERT INTO artist_song (video_id, artist_id) VALUES (?, ?)",
         ).run(details.videoId, UNMAPPED_ARTIST_ID);
+
+        const matchedArtistId = searchAgainstExistingArtists(details);
+        if (matchedArtistId) {
+            db.prepare(
+                "UPDATE artist_song SET artist_id = ? WHERE video_id = ?",
+            ).run(matchedArtistId, details.videoId);
+            console.log(
+                `Updated artist mapping for video "${details.title}" to artist ID ${matchedArtistId}`,
+            );
+        }
     }
 
     console.log(message);
     return message;
+}
+
+function searchAgainstExistingArtists(details) {
+    const artists = db.prepare("SELECT * FROM artist").all();
+    for (const artist of artists) {
+        const nameMatch = details.title
+            .toLowerCase()
+            .includes(artist.name.toLowerCase());
+        const channelMatch = details.channel
+            .toLowerCase()
+            .includes(artist.name.toLowerCase());
+
+        if (nameMatch || channelMatch) {
+            console.log(
+                `Matched artist "${artist.name}" for video "${details.title}" based on ${
+                    nameMatch ? "title" : "channel"
+                }`,
+            );
+            return artist.id;
+        }
+    }
+    return null;
 }
 
 function createListeningSession(videoId) {

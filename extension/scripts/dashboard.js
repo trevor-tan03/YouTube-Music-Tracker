@@ -521,7 +521,7 @@ function renderTracks() {
         <div class="dashboard-track-card">
             <div class="dashboard-track-rank">#${index + 1}</div>
             <img
-                src="${`https://i.ytimg.com/vi/${track.id}/maxresdefault.jpg`}"
+                src="${`https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`}"
                 alt="${escapeHtml(track.title)}"
                 class="dashboard-track-thumbnail"
                 loading="lazy"

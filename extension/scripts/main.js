@@ -2,8 +2,7 @@ let playbackInterval = null;
 let isPlaying = false;
 let startTime = 0;
 let totalListenMs = 0;
-let lastSentTime = 0;
-const SEND_INTERVAL_MS = 30000; // Send every 30 seconds
+const SEND_INTERVAL_MS = 30000; // kept for reference, heartbeat now lives in background.js
 let isSong; // undefined = unknown, true = song, false = video
 let songButton = null;
 let videoDetails = null;
@@ -74,13 +73,6 @@ function addSongButton() {
         button.style.opacity = "0.5";
 
         try {
-            console.log(
-                JSON.stringify({
-                    videoId: videoId,
-                    isSong: newState,
-                }),
-            );
-
             const response = await fetch("http://localhost:3000/classify", {
                 method: "POST",
                 headers: {
@@ -159,50 +151,15 @@ function waitForButtons(maxAttempts = 40) {
     });
 }
 
-function sendListeningData() {
-    if (!currentSessionId || totalListenMs === 0) return;
-
-    const listeningTime = (totalListenMs / 1000).toFixed(1);
-    console.log(`📊 Sending listening update: ${listeningTime}s`);
-
-    try {
-        chrome.runtime.sendMessage(
-            {
-                type: "listen",
-                sessionId: currentSessionId,
-                listeningTime,
-            },
-            (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error(
-                        "Extension context invalidated:",
-                        chrome.runtime.lastError.message,
-                    );
-                    if (playbackInterval) {
-                        clearInterval(playbackInterval);
-                        playbackInterval = null;
-                    }
-                    return;
-                }
-                if (!response) {
-                    console.error("No response from background script");
-                    return;
-                }
-                if (!response.ok) {
-                    console.error("Listening request failed:", response);
-                } else {
-                    console.log(response.data);
-                }
-            },
-        );
-    } catch (error) {
-        console.error("Failed to send message:", error);
-        if (playbackInterval) {
-            clearInterval(playbackInterval);
-            playbackInterval = null;
-        }
-    }
-}
+// ─── Playback tracking (local only — background.js owns the heartbeat) ────────
+//
+// The content script still monitors the video element so it can:
+//   1. Keep a local totalListenMs for the beforeunload flush
+//   2. Detect ad state (background can't see the DOM)
+//
+// NOTE: pause/resume triggered by tab audibility is handled by background.js
+// via chrome.tabs.onUpdated. The content script does NOT send periodic listen
+// messages anymore.
 
 function trackPlayback() {
     const video = document.querySelector("video");
@@ -211,18 +168,18 @@ function trackPlayback() {
     isPlaying = false;
     startTime = 0;
     totalListenMs = 0;
-    lastSentTime = 0;
 
     const endedHandler = () => {
         if (isPlaying) {
             totalListenMs += Date.now() - startTime;
             isPlaying = false;
         }
-        if (totalListenMs > 0) {
-            sendListeningData();
-        }
     };
     video.addEventListener("ended", endedHandler);
+
+    if (playbackInterval) {
+        clearInterval(playbackInterval);
+    }
 
     playbackInterval = setInterval(() => {
         const nowPlaying = !video.paused && !video.ended && !isAdPlaying();
@@ -238,34 +195,18 @@ function trackPlayback() {
                 ).toFixed(1)}s`,
             );
         }
-
-        const currentTotal = isPlaying
-            ? totalListenMs + (Date.now() - startTime)
-            : totalListenMs;
-
-        if (currentTotal - lastSentTime >= SEND_INTERVAL_MS) {
-            if (isPlaying) {
-                totalListenMs += Date.now() - startTime;
-                startTime = Date.now();
-            }
-            sendListeningData();
-            lastSentTime = totalListenMs;
-        }
     }, 1000);
 }
 
-async function stopTracking() {
+function stopTracking() {
     if (isPlaying) {
         totalListenMs += Date.now() - startTime;
         isPlaying = false;
     }
 
-    const listeningTime = (totalListenMs / 1000).toFixed(1);
     console.log(
-        `🛑 Stopped tracking video ${currentVideoId} — total listen time: ${listeningTime}s`,
+        `🛑 Stopped tracking video ${currentVideoId} — total listen time: ${(totalListenMs / 1000).toFixed(1)}s`,
     );
-
-    sendListeningData();
 
     if (playbackInterval) {
         clearInterval(playbackInterval);
@@ -279,12 +220,14 @@ function getVideoId() {
 }
 
 async function onNewVideoLoaded() {
-    if (isPlaying) {
+    if (currentVideoId) {
         stopTracking();
     }
 
-    // Reset song state for new video
+    // Reset state for new video
     isSong = null;
+    totalListenMs = 0;
+    currentSessionId = null;
 
     const videoId = getVideoId();
     if (!videoId) {
@@ -297,7 +240,6 @@ async function onNewVideoLoaded() {
     // Add button as soon as buttons container is available
     waitForButtons()
         .then(() => {
-            console.log("Buttons container found, adding song button");
             addSongButton();
         })
         .catch((error) => {
@@ -327,7 +269,6 @@ async function onNewVideoLoaded() {
 
         videoDetails = { title, channel, description, genre, thumbnailUrl };
 
-        // Replace your current duration-parsing block with this:
         const durationEl = document.querySelector(".ytp-time-duration");
         if (!durationEl) {
             console.error("Duration element not found");
@@ -336,14 +277,8 @@ async function onNewVideoLoaded() {
 
         function parseDurationText(text) {
             if (!text || typeof text !== "string") return 0;
-            // Remove whitespace and any non-digit/colon characters (safe-guard)
             const cleaned = text.trim().replace(/[^0-9:]/g, "");
             const parts = cleaned.split(":").map((p) => parseInt(p, 10) || 0);
-
-            // parts examples:
-            // [ss] => seconds
-            // [mm, ss] => minutes, seconds
-            // [hh, mm, ss] => hours, minutes, seconds
             if (parts.length === 1) {
                 return parts[0];
             } else if (parts.length === 2) {
@@ -351,7 +286,6 @@ async function onNewVideoLoaded() {
             } else if (parts.length === 3) {
                 return parts[0] * 3600 + parts[1] * 60 + parts[2];
             } else {
-                // Unexpected format — fall back to summing from the right
                 let seconds = 0;
                 let multiplier = 1;
                 for (let i = parts.length - 1; i >= 0; i--) {
@@ -395,22 +329,22 @@ async function onNewVideoLoaded() {
                 if (!response.ok) {
                     console.error("Classification request failed:", response);
                     return;
+                }
+
+                console.log(response.data);
+
+                if (response.data && response.data.isSong !== undefined) {
+                    isSong = response.data.isSong;
+                    updateSongButton();
+                }
+
+                // Store sessionId locally only for the beforeunload flush.
+                // background.js also stores it keyed by tabId for the heartbeat.
+                if (response.data && response.data.sessionId) {
+                    currentSessionId = response.data.sessionId;
+                    console.log(`Session ID: ${currentSessionId}`);
                 } else {
-                    console.log(response.data);
-
-                    // Update isSong state from response
-                    if (response.data && response.data.isSong !== undefined) {
-                        isSong = response.data.isSong;
-                        updateSongButton();
-                    }
-
-                    // Store the session ID if provided
-                    if (response.data && response.data.sessionId) {
-                        currentSessionId = response.data.sessionId;
-                        console.log(`Session ID: ${currentSessionId}`);
-                    } else {
-                        currentSessionId = null;
-                    }
+                    currentSessionId = null;
                 }
             },
         );
@@ -429,8 +363,8 @@ window.addEventListener("yt-navigate-finish", async () => {
 
     if (newId && newId !== currentVideoId) {
         console.log("New video detected");
-        await onNewVideoLoaded();
         currentVideoId = newId;
+        await onNewVideoLoaded();
 
         chrome.runtime.sendMessage({
             type: "currentVideo",
@@ -439,28 +373,30 @@ window.addEventListener("yt-navigate-finish", async () => {
     }
 });
 
+// visibilitychange: no longer sends a listen update — background.js handles
+// timing. We just log for debugging.
 document.addEventListener("visibilitychange", () => {
-    if (document.hidden && totalListenMs > 0) {
-        if (isPlaying) {
-            totalListenMs += Date.now() - startTime;
-            isPlaying = false;
-        }
-        sendListeningData();
+    if (document.hidden) {
+        console.log(
+            `👁️ Tab hidden — background.js will handle pause via audible change`,
+        );
     }
 });
 
-window.addEventListener("beforeunload", (e) => {
+// beforeunload: send one final flush so nothing is lost between the last
+// heartbeat and the tab closing. background.js will also fire onRemoved
+// shortly after, but that races with the server so we belt-and-suspenders here.
+window.addEventListener("beforeunload", () => {
     if (isPlaying) {
         totalListenMs += Date.now() - startTime;
         isPlaying = false;
     }
 
     console.log(
-        `currentVideoId: ${currentVideoId}\ntotalListenTime: ${
-            totalListenMs / 1000
-        }s`,
+        `currentVideoId: ${currentVideoId}\ntotalListenTime: ${(totalListenMs / 1000).toFixed(1)}s`,
     );
-    if (!currentVideoId || totalListenMs === 0) return;
+
+    if (!currentSessionId || totalListenMs === 0) return;
 
     try {
         chrome.runtime.sendMessage({

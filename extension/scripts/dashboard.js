@@ -1237,9 +1237,6 @@ async function loadArtists() {
 
 function renderArtists(artists) {
     const container = document.getElementById("artists-container");
-    artists_total_listening_time = artists
-        .map((a) => a.total_listening_time)
-        .reduce((a, b) => a + b, 0);
 
     if (!artists || artists.length === 0) {
         container.innerHTML =
@@ -1247,24 +1244,161 @@ function renderArtists(artists) {
         return;
     }
 
-    container.innerHTML = artists
-        .map(
-            (artist, index) => `
-        <div class="dashboard-video-card" style="cursor: default;">
-            <div class="dashboard-track-rank" style="position: static; width: 36px; height: 36px; flex-shrink: 0;">
-                #${index + 1}
+    const totalTime = artists.reduce(
+        (sum, a) => sum + a.total_listening_time,
+        0,
+    );
+    const top = artists.slice(0, 10); // cap charts at top 10 for readability
+
+    // Palette — cycles through accent shades
+    const COLORS = [
+        "#88c0d0",
+        "#6aabb8",
+        "#4e96a0",
+        "#81a1c1",
+        "#7b8fa8",
+        "#a3be8c",
+        "#8aab6e",
+        "#ebcb8b",
+        "#d08770",
+        "#bf616a",
+    ];
+
+    container.innerHTML = `
+        <div class="artists-charts">
+            <div class="artists-chart-panel">
+                <div class="artists-chart-title">Listening time</div>
+                <div class="artists-bar-chart" id="artists-bar-chart"></div>
             </div>
-            <div class="dashboard-video-info">
-                <div class="dashboard-video-title" style="cursor: default;">${escapeHtml(artist.artist_name)}</div>
-                <div class="dashboard-video-meta">
-                    <span>🎵 ${artist.song_count} song${artist.song_count !== 1 ? "s" : ""}</span>
-                    <span>🎧 ${formatTime(artist.total_listening_time * 3600)}</span>
-                    <span>⏱️ ${Math.round((artist.total_listening_time / artists_total_listening_time) * 100)}% of your listening time</span>
+            <div class="artists-chart-panel artists-chart-panel--donut">
+                <div class="artists-chart-title">Share of listening</div>
+                <div class="artists-donut-wrap">
+                    <svg id="artists-donut" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"></svg>
+                    <div class="artists-donut-legend" id="artists-donut-legend"></div>
                 </div>
             </div>
         </div>
-    `,
-        )
+        <div class="artists-list" id="artists-list"></div>
+    `;
+
+    // ── Bar chart ────────────────────────────────────────────────────────────
+    const barChart = document.getElementById("artists-bar-chart");
+    const maxTime = top[0].total_listening_time; // already sorted desc
+
+    top.forEach((artist, i) => {
+        const pct =
+            maxTime > 0 ? (artist.total_listening_time / maxTime) * 100 : 0;
+        const sharePct =
+            totalTime > 0
+                ? Math.round((artist.total_listening_time / totalTime) * 100)
+                : 0;
+        const color = COLORS[i % COLORS.length];
+
+        const row = document.createElement("div");
+        row.className = "artists-bar-row";
+        row.innerHTML = `
+            <div class="artists-bar-label">${escapeHtml(artist.artist_name)}</div>
+            <div class="artists-bar-track">
+                <div class="artists-bar-fill" style="width:0%;background:${color}" data-width="${pct}"></div>
+            </div>
+            <div class="artists-bar-value">${formatTime(artist.total_listening_time * 3600)}<span class="artists-bar-pct">${sharePct}%</span></div>
+        `;
+        barChart.appendChild(row);
+    });
+
+    // Animate bars in after paint
+    requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+            barChart.querySelectorAll(".artists-bar-fill").forEach((el) => {
+                el.style.width = el.dataset.width + "%";
+            });
+        }),
+    );
+
+    // ── Donut chart ──────────────────────────────────────────────────────────
+    const svg = document.getElementById("artists-donut");
+    const legend = document.getElementById("artists-donut-legend");
+    const cx = 100,
+        cy = 100,
+        r = 80,
+        strokeW = 28;
+    const circumference = 2 * Math.PI * r;
+
+    // "Other" bucket for artists beyond top N
+    const donutArtists = top.slice(0, 8);
+    const otherTime = artists
+        .slice(8)
+        .reduce((s, a) => s + a.total_listening_time, 0);
+    if (otherTime > 0)
+        donutArtists.push({
+            artist_name: "Other",
+            total_listening_time: otherTime,
+        });
+
+    let offset = 0;
+    // Start from top (-90deg = -circumference/4 offset)
+    const startOffset = circumference * 0.25;
+
+    donutArtists.forEach((artist, i) => {
+        const share =
+            totalTime > 0 ? artist.total_listening_time / totalTime : 0;
+        const dash = share * circumference;
+        const gap = circumference - dash;
+        const color = i < COLORS.length ? COLORS[i] : "#4c566a";
+
+        const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+        );
+        circle.setAttribute("cx", cx);
+        circle.setAttribute("cy", cy);
+        circle.setAttribute("r", r);
+        circle.setAttribute("fill", "none");
+        circle.setAttribute("stroke", color);
+        circle.setAttribute("stroke-width", strokeW);
+        circle.setAttribute("stroke-dasharray", `${dash} ${gap}`);
+        circle.setAttribute("stroke-dashoffset", startOffset - offset);
+        circle.style.transition = "stroke-dasharray 0.6s ease";
+        svg.appendChild(circle);
+
+        offset += dash;
+
+        // Legend row
+        const row = document.createElement("div");
+        row.className = "artists-legend-row";
+        row.innerHTML = `
+            <span class="artists-legend-dot" style="background:${color}"></span>
+            <span class="artists-legend-name">${escapeHtml(artist.artist_name)}</span>
+            <span class="artists-legend-pct">${Math.round(share * 100)}%</span>
+        `;
+        legend.appendChild(row);
+    });
+
+    // ── Ranked list ──────────────────────────────────────────────────────────
+    const list = document.getElementById("artists-list");
+    list.innerHTML = artists
+        .map((artist, index) => {
+            const sharePct =
+                totalTime > 0
+                    ? Math.round(
+                          (artist.total_listening_time / totalTime) * 100,
+                      )
+                    : 0;
+            const color = COLORS[index % COLORS.length];
+            return `
+            <div class="dashboard-video-card" style="cursor:default;">
+                <div class="artists-rank" style="color:${index < COLORS.length ? color : "var(--muted)"}">#${index + 1}</div>
+                <div class="dashboard-video-info">
+                    <div class="dashboard-video-title" style="cursor:default;">${escapeHtml(artist.artist_name)}</div>
+                    <div class="dashboard-video-meta">
+                        <span>🎵 ${artist.song_count} song${artist.song_count !== 1 ? "s" : ""}</span>
+                        <span>🎧 ${formatTime(artist.total_listening_time * 3600)}</span>
+                        <span>${sharePct}% of listening</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        })
         .join("");
 }
 

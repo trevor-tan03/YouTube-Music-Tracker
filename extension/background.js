@@ -100,6 +100,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     accumulateTime(state);
     sendListenUpdate(tabId, state, true);
     delete tabSessions[tabId];
+    chrome.storage.session.remove(`currentVideo_${tabId}`);
     console.log(`🗑️  [tab ${tabId}] Removed — session cleaned up`);
 });
 
@@ -198,11 +199,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true;
         }
 
+        case "getTabId": {
+            sendResponse({ tabId: tabId ?? null });
+            return;
+        }
+
         case "currentVideo": {
             if (tabId != null) {
                 chrome.storage.session.set({
                     [`currentVideo_${tabId}`]: message.video,
                 });
+            }
+            return;
+        }
+
+        case "clearCurrentVideo": {
+            if (tabId != null) {
+                chrome.storage.session.remove(`currentVideo_${tabId}`);
             }
             return;
         }

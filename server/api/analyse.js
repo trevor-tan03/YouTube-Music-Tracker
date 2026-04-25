@@ -42,7 +42,7 @@ export async function analyseVideo(req, res) {
                 console.log(message);
                 return res.status(400).json({
                     message,
-                    isSong: existingVideo.is_song,
+                    isSong: Boolean(existingVideo.is_song),
                 });
             }
 
@@ -53,7 +53,7 @@ export async function analyseVideo(req, res) {
             return res.status(200).json({
                 message,
                 sessionId, // Return the session ID
-                isSong: existingVideo.is_song,
+                isSong: Boolean(existingVideo.is_song),
             });
         }
 

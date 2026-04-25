@@ -3,13 +3,13 @@ import { validateLLMOutput } from "./checkResponseFormat.js";
 
 // Initialize LM Studio client (uses OpenAI-compatible API)
 const lmStudio = new OpenAI({
-  baseURL: "http://localhost:1234/v1", // LM Studio default port
-  apiKey: "lm-studio", // LM Studio doesn't require a real API key
+    baseURL: "http://localhost:1234/v1", // LM Studio default port
+    apiKey: "lm-studio", // LM Studio doesn't require a real API key
 });
 
 export async function analyzeWithLLM(title, channel, description, genre) {
-  // Prepare the prompt for the LLM
-  const prompt = `
+    // Prepare the prompt for the LLM
+    const prompt = `
 You are a strict classifier. Your primary goal is to correctly say "NOT a song" when evidence is insufficient.
 
 Step 1: Decide if this video is a song.
@@ -61,26 +61,26 @@ Rules:
 - When uncertain, choose isSong = false.
 `;
 
-  // Call the LLM API
-  const completion = await lmStudio.chat.completions.create({
-    model: "google/gemma-3-1b", // LM Studio uses whatever model is loaded
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a music classification assistant. Respond only with valid JSON.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: 0.3, // Lower temperature for more consistent output
-    max_tokens: 500,
-  });
+    // Call the LLM API
+    const completion = await lmStudio.chat.completions.create({
+        model: "nvidia/nemotron-3-nano-4b", // LM Studio uses whatever model is loaded
+        messages: [
+            {
+                role: "system",
+                content:
+                    "You are a music classification assistant. Respond only with valid JSON.",
+            },
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        temperature: 0.3, // Lower temperature for more consistent output
+        max_tokens: 500,
+    });
 
-  // Parse the LLM response
-  const responseText = completion.choices[0].message.content;
-  const result = validateLLMOutput(responseText);
-  return result;
+    // Parse the LLM response
+    const responseText = completion.choices[0].message.content;
+    const result = validateLLMOutput(responseText);
+    return result;
 }

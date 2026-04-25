@@ -6,26 +6,9 @@
         <title>YouTube Music Tracker</title>
         <link rel="stylesheet" href="./styles/popup.css" />
     </head>
-    <body style="border-radius: 10px">
-        <div id="current-video">No Video Playing</div>
-        <div id="current-video-settings"></div>
-
-        <div class="tabs">
-            <button class="tab active" data-period="day">Today</button>
-            <button class="tab" data-period="week">This Week</button>
-            <button class="tab" data-period="month">This Month</button>
-            <button class="tab" data-period="year">This Year</button>
-            <button class="tab" data-period="all">All</button>
-        </div>
-
-        <div class="tracks-container" id="tracks-container">
-            <div class="loading">Loading your top tracks...</div>
-        </div>
-
-        <button onclick="showDashboard()" id="open-dashboard" class="link">
-            View All...
-        </button>
-
+    <body>
+        <div id="now-playing"></div>
+        <button id="open-dashboard" class="link">View Dashboard →</button>
         <script src="scripts/popup.js"></script>
     </body>
 </html>

@@ -1101,36 +1101,121 @@ async function addNewArtist(name) {
     }
 }
 
-async function populateArtistFilter() {
-    const select = document.getElementById("artist-filter");
-    if (!select) return;
+// ── Artist filter combobox ────────────────────────────────────────────────────
 
+let allArtists = []; // cache fetched artists
+const UNMAPPED_ARTIST_ID = 98;
+
+async function populateArtistFilter() {
     try {
         const response = await fetch(`${API_ENDPOINT}/artists`);
         if (!response.ok) throw new Error("Failed to fetch artists");
-        const artists = await response.json();
-
-        select.innerHTML = '<option value="">All artists</option>';
-        artists.forEach((artist) => {
-            const option = document.createElement("option");
-            option.value = artist.id;
-            option.textContent = artist.name;
-            select.appendChild(option);
-        });
+        allArtists = await response.json();
+        renderArtistDropdown("");
     } catch (error) {
         console.error("Error fetching artists:", error);
     }
 }
 
+function renderArtistDropdown(query) {
+    const list = document.getElementById("artist-filter-list");
+    const unmappedWrap = document.getElementById("artist-filter-unmapped");
+    const unmappedList = document.getElementById("artist-filter-unmapped-list");
+    const empty = document.getElementById("artist-filter-empty");
+    const allLabel = document.getElementById("artist-filter-all-label");
+
+    const q = query.toLowerCase().trim();
+
+    // Split unmapped vs regular
+    const unmapped = allArtists.filter((a) => a.id === UNMAPPED_ARTIST_ID);
+    const regular = allArtists.filter((a) => a.id !== UNMAPPED_ARTIST_ID);
+
+    const filtered = q
+        ? regular.filter((a) => a.name.toLowerCase().includes(q))
+        : regular;
+
+    // "All artists" item (only show when not filtering)
+    list.innerHTML = "";
+    if (!q) {
+        list.appendChild(makeArtistItem("", "All artists", true));
+    }
+
+    filtered.forEach((a) =>
+        list.appendChild(makeArtistItem(String(a.id), a.name)),
+    );
+
+    // Unmapped section — always show at top when no query, or if matches query
+    const unmappedVisible =
+        !q || unmapped.some((a) => a.name.toLowerCase().includes(q));
+    unmappedWrap.hidden = !unmappedVisible || unmapped.length === 0;
+    unmappedList.innerHTML = "";
+    if (unmappedVisible) {
+        unmapped.forEach((a) =>
+            unmappedList.appendChild(makeArtistItem(String(a.id), a.name)),
+        );
+    }
+
+    allLabel.hidden = filtered.length === 0;
+    empty.hidden = filtered.length > 0 || unmappedVisible;
+}
+
+function makeArtistItem(value, label, isAll = false) {
+    const item = document.createElement("div");
+    item.className =
+        "artist-combobox__item" + (isAll ? " artist-combobox__item--all" : "");
+    item.dataset.value = value;
+    item.textContent = label;
+    if (String(value) === String(currentArtistFilter)) {
+        item.classList.add("artist-combobox__item--active");
+    }
+    item.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // prevent input blur before click registers
+        selectArtist(value, label, isAll);
+    });
+    return item;
+}
+
+function selectArtist(value, label, isAll = false) {
+    const input = document.getElementById("artist-filter-input");
+    const dropdown = document.getElementById("artist-filter-dropdown");
+
+    currentArtistFilter = value;
+    input.value = isAll ? "" : label;
+    input.placeholder = isAll ? "All artists" : label;
+    dropdown.hidden = true;
+    input.blur();
+    loadTopTracks();
+}
+
 function setupArtistFilter() {
-    const select = document.getElementById("artist-filter");
-    if (!select) return;
+    const input = document.getElementById("artist-filter-input");
+    const dropdown = document.getElementById("artist-filter-dropdown");
+    if (!input) return;
 
     populateArtistFilter();
 
-    select.addEventListener("change", (e) => {
-        currentArtistFilter = e.target.value;
-        loadTopTracks();
+    input.addEventListener("focus", () => {
+        renderArtistDropdown(input.value);
+        dropdown.hidden = false;
+    });
+
+    input.addEventListener("input", () => {
+        renderArtistDropdown(input.value);
+        dropdown.hidden = false;
+    });
+
+    input.addEventListener("blur", () => {
+        // Small delay so mousedown on an item fires first
+        setTimeout(() => {
+            dropdown.hidden = true;
+        }, 150);
+    });
+
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            dropdown.hidden = true;
+            input.blur();
+        }
     });
 }
 

@@ -54,9 +54,49 @@
                             This Year
                         </button>
                         <button class="tab" data-period="all">All Time</button>
-                        <select id="artist-filter">
-                            <option value="">All artists</option>
-                        </select>
+                        <div
+                            id="artist-filter-combobox"
+                            class="artist-combobox"
+                        >
+                            <input
+                                type="text"
+                                id="artist-filter-input"
+                                class="artist-combobox__input"
+                                placeholder="All artists"
+                                autocomplete="off"
+                                spellcheck="false"
+                            />
+                            <div
+                                id="artist-filter-dropdown"
+                                class="artist-combobox__dropdown"
+                                hidden
+                            >
+                                <div
+                                    id="artist-filter-unmapped"
+                                    class="artist-combobox__section"
+                                    hidden
+                                >
+                                    <div class="artist-combobox__section-label">
+                                        — Unmapped
+                                    </div>
+                                    <div id="artist-filter-unmapped-list"></div>
+                                </div>
+                                <div
+                                    id="artist-filter-all-label"
+                                    class="artist-combobox__section-label"
+                                >
+                                    — Artists
+                                </div>
+                                <div id="artist-filter-list"></div>
+                                <div
+                                    id="artist-filter-empty"
+                                    class="artist-combobox__empty"
+                                    hidden
+                                >
+                                    No artists found
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div

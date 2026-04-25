@@ -229,6 +229,8 @@ async function onNewVideoLoaded() {
     totalListenMs = 0;
     currentSessionId = null;
 
+    chrome.runtime.sendMessage({ type: "clearCurrentVideo" });
+
     const videoId = getVideoId();
     if (!videoId) {
         console.log("No video ID found, skipping");
@@ -338,14 +340,23 @@ async function onNewVideoLoaded() {
                     updateSongButton();
                 }
 
-                // Store sessionId locally only for the beforeunload flush.
-                // background.js also stores it keyed by tabId for the heartbeat.
                 if (response.data && response.data.sessionId) {
                     currentSessionId = response.data.sessionId;
                     console.log(`Session ID: ${currentSessionId}`);
                 } else {
                     currentSessionId = null;
                 }
+
+                chrome.runtime.sendMessage({
+                    type: "currentVideo",
+                    video: {
+                        title,
+                        channel,
+                        thumbnailUrl: payload.thumbnailUrl,
+                        isSong: response.data?.isSong ?? null,
+                        videoId,
+                    },
+                });
             },
         );
 
@@ -365,11 +376,6 @@ window.addEventListener("yt-navigate-finish", async () => {
         console.log("New video detected");
         currentVideoId = newId;
         await onNewVideoLoaded();
-
-        chrome.runtime.sendMessage({
-            type: "currentVideo",
-            video: videoDetails,
-        });
     }
 });
 

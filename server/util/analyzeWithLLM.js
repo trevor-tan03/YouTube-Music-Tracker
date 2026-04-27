@@ -63,7 +63,7 @@ Rules:
 
     // Call the LLM API
     const completion = await lmStudio.chat.completions.create({
-        model: "nvidia/nemotron-3-nano-4b", // LM Studio uses whatever model is loaded
+        model: "meta-llama-3.1-8b-instruct", // LM Studio uses whatever model is loaded
         messages: [
             {
                 role: "system",

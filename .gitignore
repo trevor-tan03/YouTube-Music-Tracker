@@ -1,3 +1,4 @@
 node_modules/
 youtube-music-tracker.db
 queries/
+.env

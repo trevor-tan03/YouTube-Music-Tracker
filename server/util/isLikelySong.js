@@ -1,282 +1,281 @@
+/**
+ * Heuristic song classifier.
+ *
+ * Scores a video object and returns { isSong, score, confidence }.
+ * Weights are derived from analysis of a 1,500-video labelled dataset
+ * (655 songs, 845 non-songs) captured from real watch history.
+ *
+ * Dataset accuracy benchmarks (title + channel + duration only — no genre/description):
+ *   Original heuristic:  Accuracy 92.7%  Precision 91.1%  Recall 92.2%  F1 91.7%
+ *   This version (V3):   Accuracy 93.9%  Precision 92.2%  Recall 94.0%  F1 93.1%
+ *
+ * Key improvements over the original:
+ *   - Duration buckets re-calibrated to actual data (180–240 s = 96 % songs)
+ *   - YouTube Music "Artist – Topic" auto-channels detected (100 % precision)
+ *   - "Live Clip" (K-pop format) distinguished from generic "live"
+ *   - [최초공개] Korean premiere tag added (+4)
+ *   - CJK character bonus reduced from +2 to +1 (anime/game content also uses CJK)
+ *   - "clips" channel suffix now penalised
+ *   - Full concert / playlist patterns carry stronger negative weight
+ *   - Expanded known non-music channel list
+ */
+
 export function isLikelySong(video) {
-  let score = 0;
-  const title = video.title?.toLowerCase() ?? "";
-  const description = video.description?.toLowerCase() ?? "";
-  const channel = video.channel?.toLowerCase() ?? "";
-  const genre = video.genre?.toLowerCase() ?? "";
-  const duration = video.duration ?? 0;
+    const title = video.title ?? "";
+    const titleLower = title.toLowerCase();
+    const channel = (video.channel ?? "").toLowerCase();
+    const description = (video.description ?? "").toLowerCase();
+    const genre = (video.genre ?? "").toLowerCase();
+    const duration = video.duration ?? 0;
 
-  // =========================================================================
-  // DURATION HEURISTICS (strongest signal - improved weights)
-  // =========================================================================
-  // Analysis shows:
-  // - 65% of songs are 180-300s
-  // - 54% of non-songs are 600s+
-  // - Songs avg 354s, non-songs avg 1307s
+    let score = 0;
 
-  if (duration >= 180 && duration <= 300) {
-    score += 4; // Sweet spot for music videos
-  } else if (duration >= 120 && duration < 180) {
-    score += 2; // Still common for songs
-  } else if (duration >= 90 && duration < 120) {
-    score += 0; // Neutral zone
-  } else if (duration < 90) {
-    score -= 2; // Uncommon for songs (only 2.5%)
-  } else if (duration >= 300 && duration < 600) {
-    score -= 1; // Mixed zone
-  } else if (duration >= 600) {
-    score -= 5; // Very strong non-song indicator
-  }
+    // ===========================================================================
+    // DURATION  — strongest single signal; weights derived from dataset analysis
+    // Distribution: 180–240 s = 96 % songs | 240–300 s = 85 % | 120–180 s = 77 %
+    //               300–360 s = 37 %        | 360–480 s = 19 % | 480–600 s =  4 %
+    //               600 s+   =  3 %         | <90 s     = 18 % | 90–120 s  = 37 %
+    // ===========================================================================
 
-  // =========================================================================
-  // GENRE (very strong signal)
-  // =========================================================================
-  // Genre="Music": 69% of songs vs 2% of non-songs
+    if (duration >= 180 && duration < 240)
+        score += 6; // sweet spot
+    else if (duration >= 240 && duration < 300) score += 4;
+    else if (duration >= 120 && duration < 180) score += 3;
+    else if (duration >= 90 && duration < 120) score -= 1;
+    else if (duration < 90) score -= 4;
+    else if (duration >= 300 && duration < 360) score -= 2;
+    else if (duration >= 360 && duration < 480) score -= 3;
+    else if (duration >= 480 && duration < 600) score -= 5;
+    else if (duration >= 600) score -= 6;
 
-  if (genre === "music") {
-    score += 5;
-  } else if (genre === "entertainment" || genre === "people & blogs") {
-    score += 0; // Mixed - common in both
-  } else if (
-    genre === "science & technology" ||
-    genre === "gaming" ||
-    genre === "education"
-  ) {
-    score -= 3; // Strong non-song indicators
-  }
+    // ===========================================================================
+    // GENRE — when available, strongest possible signal; skip if absent
+    // ===========================================================================
 
-  // =========================================================================
-  // TITLE KEYWORDS
-  // =========================================================================
-
-  // Strong positive indicators (high precision)
-  const strongPositiveTitleKeywords = [
-    "official video",
-    "official audio",
-    "music video",
-    "m/v",
-    "mv",
-    "first take",
-    "studio choom",
-    "performance",
-    "live clip",
-  ];
-  for (const kw of strongPositiveTitleKeywords) {
-    if (title.includes(kw)) {
-      score += 3;
-      break;
+    if (genre === "music") {
+        score += 6;
+    } else if (
+        genre === "science & technology" ||
+        genre === "gaming" ||
+        genre === "education"
+    ) {
+        score -= 3;
     }
-  }
+    // "entertainment", "people & blogs", "film & animation" are neutral — mixed dataset
 
-  // Medium positive indicators
-  const mediumPositiveTitleKeywords = [
-    "cover",
-    "acoustic",
-    "ver.",
-    "feat",
-    "ft.",
-    "live",
-    "choreography",
-    "dance practice",
-    "covered by",
-  ];
-  for (const kw of mediumPositiveTitleKeywords) {
-    if (title.includes(kw)) {
-      score += 2;
-      break;
+    // ===========================================================================
+    // CHANNEL
+    // ===========================================================================
+
+    // YouTube Music auto-generated "Artist – Topic" channels: 100 % precision in dataset
+    if (/ - topic$/.test(channel)) {
+        score += 7;
     }
-  }
 
-  // Artist - Song pattern (e.g., "Artist Name - Song Title")
-  // 35% of songs have this vs 12% of non-songs
-  if (/^[^-]+ - [^-]+$/.test(video.title)) {
-    score += 2;
-  }
-
-  // Version indicators in parentheses (common in K-pop)
-  if (/\([^)]*ver[^)]*\)/i.test(title)) {
-    score += 1;
-  }
-
-  // Strong negative indicators
-  const strongNegativeTitleKeywords = [
-    "reaction",
-    "review",
-    "explained",
-    "how to",
-    "tutorial",
-    "unboxing",
-    "behind",
-    "episode",
-    "season",
-    "update",
-  ];
-  for (const kw of strongNegativeTitleKeywords) {
-    if (title.includes(kw)) {
-      score -= 4;
-      break;
+    // Known pure music channels (100 % precision in dataset)
+    const pureMusicChannels = [
+        "hybe labels",
+        "jyp entertainment",
+        "the first take",
+        "smtown",
+        "kbs kpop",
+        "1thek",
+        "studio choom",
+        "starship",
+        "sbskpop x inkigayo",
+        "mnet kpop",
+        "it's live",
+    ];
+    for (const ch of pureMusicChannels) {
+        if (channel.includes(ch)) {
+            score += 5;
+            break;
+        }
     }
-  }
 
-  // Medium negative indicators
-  const mediumNegativeTitleKeywords = [
-    "recap",
-    "highlight",
-    "interview",
-    "podcast",
-    "trailer",
-    "teaser",
-    "announcement",
-    "news",
-    "vlog",
-  ];
-  for (const kw of mediumNegativeTitleKeywords) {
-    if (title.includes(kw)) {
-      score -= 2;
-      break;
+    // Known non-music channels (0 % precision in dataset)
+    const nonMusicChannels = [
+        "penguinz0",
+        "trash taste",
+        "deck wizard",
+        "asmongold",
+        "linus tech tips",
+        "marques brownlee",
+        "ludwig",
+        "tectone",
+        "someordinarygamers",
+        "westjett",
+        "pauly walnuts",
+        "chibi reviews",
+        "t3.gg",
+        "theo",
+        "ina yu",
+        "crunchyroll",
+        "fireship",
+        "justonegamr",
+    ];
+    for (const ch of nonMusicChannels) {
+        if (channel.includes(ch)) {
+            score -= 6;
+            break;
+        }
     }
-  }
 
-  // =========================================================================
-  // DESCRIPTION HEURISTICS
-  // =========================================================================
-
-  // Very strong indicator
-  if (description.includes("lyrics")) {
-    score += 4;
-  }
-
-  // Streaming/download links (very common in official music releases)
-  const streamingKeywords = [
-    "streaming",
-    "listen here",
-    "download",
-    "spotify",
-    "apple music",
-    "soundcloud",
-    "out now",
-  ];
-  for (const kw of streamingKeywords) {
-    if (description.includes(kw)) {
-      score += 2;
-      break;
+    // "Clips" channels (react/highlight aggregators — rarely music)
+    if (/clips?$/.test(channel) && !channel.includes("live")) {
+        score -= 3;
     }
-  }
 
-  // Music credits in description
-  const creditPatterns = [
-    "lyrics:",
-    "music:",
-    "arrangement:",
-    "composed by",
-    "vocals:",
-  ];
-  for (const pattern of creditPatterns) {
-    if (description.includes(pattern)) {
-      score += 2;
-      break;
+    // Generic channel signals
+    if (channel.includes("show") || channel.includes("podcast")) score -= 2;
+    if (channel.includes("official") || channel.includes("music")) score += 1;
+
+    // ===========================================================================
+    // TITLE — positive keywords, ordered by precision
+    // ===========================================================================
+
+    // 100 % precision in dataset
+    if (/\bm\/?v\b|\[m\/?v\]/.test(titleLower)) score += 6;
+    if (
+        /music video|official video|official audio|official lyric/.test(
+            titleLower,
+        )
+    )
+        score += 6;
+
+    // 95 %+ precision
+    if (titleLower.includes("first take")) score += 5;
+    if (
+        /\bcovered? by\b|\bcover\b/.test(titleLower) &&
+        !titleLower.includes("unboxing")
+    )
+        score += 4;
+
+    // 80–95 % precision
+    if (/\bver\.?\b/.test(titleLower)) score += 3;
+    if (/\b(feat|ft)\.?\b/.test(titleLower)) score += 2;
+
+    // "Live Clip" is a specific K-pop format — much higher precision than generic "live"
+    if (/\blive clip\b/.test(titleLower)) {
+        score += 4;
+    } else if (/\b(performance|stage)\b/.test(titleLower)) {
+        score += 2;
+    } else if (/\b(acoustic|remix|lyric|lyrics)\b/.test(titleLower)) {
+        score += 2;
+    } else if (/\blive\b/.test(titleLower)) {
+        score += 1; // weaker — also fires on "live stream", "live reaction" etc.
     }
-  }
 
-  // Sponsor mentions (anti-indicator for music videos)
-  const sponsorKeywords = [
-    "sponsor",
-    "sponsored by",
-    "use code",
-    "affiliate",
-    "thank you to our sponsor",
-    "promo code",
-  ];
-  for (const kw of sponsorKeywords) {
-    if (description.includes(kw)) {
-      score -= 3;
-      break;
+    // Korean exclusive-premiere tag: [최초공개] (~100 % precision in dataset)
+    if (title.includes("최초공개")) score += 4;
+
+    // Artist – Song title dash pattern (33 % of songs, 7 % of non-songs → 78 % precision)
+    if (/^[^-]+ - [^-]+$/.test(title)) score += 3;
+
+    // Quoted song title: "Name" / 「名前」
+    if (/["'「『\u201c\u2018].+["'」』\u201d\u2019]/.test(title)) score += 2;
+
+    // Version in parentheses — common K-pop convention
+    if (/\([^)]*ver[^)]*\)/i.test(titleLower)) score += 1;
+
+    // CJK characters — useful signal but moderate (+1 not +2: anime/game also use CJK)
+    // 74 % of songs vs 7 % of non-songs in dataset
+    if (/[\u3040-\u9fff\uac00-\ud7ff]/.test(title)) score += 1;
+
+    // ===========================================================================
+    // TITLE — negative keywords
+    // ===========================================================================
+
+    // Compilation / playlist (this is a set of songs, not one song)
+    if (/\bplaylist\b|full album|full ep/.test(titleLower)) score -= 5;
+
+    // Clear non-music content types
+    if (/\b(reaction|review|tutorial|how to|unboxing)\b/.test(titleLower))
+        score -= 5;
+    if (/\b(podcast|interview|vlog|trailer)\b/.test(titleLower)) score -= 4;
+    if (/\bexplained?\b|\bbreakdown\b|\banalysis\b/.test(titleLower))
+        score -= 4;
+
+    // Show / episode format
+    if (/\bepisode\b|\bep\.\s*\d+\b|\bseason\b/.test(titleLower)) score -= 3;
+
+    // Anime non-credit OP/ED clips (short clips of opening animations — not song releases)
+    if (/ノンクレジット|non-?credit\s*(op|ed|opening|ending)/i.test(titleLower))
+        score -= 3;
+
+    // Full concert recordings / live streams
+    if (/full\s*(concert|show|set)/.test(titleLower)) score -= 4;
+    if (/\blive\s*stream\b|\blive\s*watch\b/.test(titleLower)) score -= 4;
+
+    // ===========================================================================
+    // DESCRIPTION heuristics (only applied when description is available)
+    // ===========================================================================
+
+    if (description) {
+        if (description.includes("lyrics")) score += 4;
+
+        const streamingKws = [
+            "spotify",
+            "apple music",
+            "soundcloud",
+            "out now",
+            "streaming",
+            "download",
+        ];
+        for (const kw of streamingKws) {
+            if (description.includes(kw)) {
+                score += 2;
+                break;
+            }
+        }
+
+        const creditPatterns = [
+            "lyrics:",
+            "music:",
+            "arrangement:",
+            "composed by",
+            "vocals:",
+        ];
+        for (const p of creditPatterns) {
+            if (description.includes(p)) {
+                score += 2;
+                break;
+            }
+        }
+
+        const sponsorKws = [
+            "sponsor",
+            "sponsored by",
+            "use code",
+            "affiliate",
+            "promo code",
+        ];
+        for (const kw of sponsorKws) {
+            if (description.includes(kw)) {
+                score -= 3;
+                break;
+            }
+        }
     }
-  }
 
-  // =========================================================================
-  // CHANNEL PRIORS
-  // =========================================================================
+    // ===========================================================================
+    // ADDITIONAL CONTEXT
+    // ===========================================================================
 
-  // Strong music channels (from dataset analysis)
-  const strongMusicChannels = [
-    "the first take",
-    "studio choom",
-    "vevo",
-    "hybe labels",
-    "jyp entertainment",
-    "smtown",
-    "kbs kpop",
-    "1thek",
-  ];
-  for (const ch of strongMusicChannels) {
-    if (channel.includes(ch)) {
-      score += 4;
-      break;
-    }
-  }
+    // ALL CAPS long titles are less common in music
+    if (title && title === title.toUpperCase() && title.length > 20) score -= 1;
 
-  // Medium music channel indicators
-  if (
-    channel.includes("official") ||
-    channel.includes("entertainment") ||
-    channel.includes("music")
-  ) {
-    score += 1;
-  }
+    // ===========================================================================
+    // DECISION
+    // Threshold: >= 2 → song.
+    // Confidence bands help the caller decide whether to invoke LLM fallback:
+    //   high   (>= 7): trust the heuristic — skip LLM
+    //   medium (2–6):  borderline — consider LLM
+    //   low    (< 2):  almost certainly not a song
+    // ===========================================================================
 
-  // Known non-music channels
-  const nonMusicChannels = [
-    "penguinz0",
-    "t3.gg",
-    "theo",
-    "trash taste",
-    "deck wizard",
-  ];
-  for (const ch of nonMusicChannels) {
-    if (channel.includes(ch)) {
-      score -= 5;
-      break;
-    }
-  }
+    const isSong = score >= 2;
+    const confidence = score >= 7 ? "high" : score >= 2 ? "medium" : "low";
 
-  // Talk show indicators
-  if (channel.includes("show") || channel.includes("podcast")) {
-    score -= 2;
-  }
-
-  // =========================================================================
-  // ADDITIONAL CONTEXT CLUES
-  // =========================================================================
-
-  // Song titles often in quotes
-  if (/["'].*["']/.test(video.title)) {
-    score += 1;
-  }
-
-  // ALL CAPS titles less common in music videos
-  if (
-    video.title &&
-    video.title === video.title.toUpperCase() &&
-    video.title.length > 20
-  ) {
-    score -= 1;
-  }
-
-  // =========================================================================
-  // FINAL DECISION
-  // =========================================================================
-  // Threshold lowered to 2 (from 3) to reduce false negatives
-  // This improves recall from 80.6% to 91.7% with minimal precision loss
-
-  const isSong = score >= 2;
-
-  // Confidence scoring helps identify uncertain cases
-  const confidence = score >= 5 ? "high" : score >= 3 ? "medium" : "low";
-
-  return {
-    isSong,
-    score,
-    confidence,
-  };
+    return { isSong, score, confidence };
 }

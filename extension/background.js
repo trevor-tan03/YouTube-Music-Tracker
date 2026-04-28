@@ -1,4 +1,5 @@
 let tabSessions = {};
+const HEARTBEAT = "heartbeat";
 
 // ─── Message Events ──────────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
@@ -13,6 +14,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
                 sessionId: null,
                 isSong: false,
                 isPlaying: false,
+                title: null,
+                lastSentMs: 0,
                 totalListenMs: 0,
                 startTime: 0,
             };
@@ -23,10 +26,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
                 body: JSON.stringify(message.payload),
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json();
             const state = tabSessions[tabId];
             state.sessionId = data?.sessionId ?? null;
             state.isSong = data?.isSong ?? null;
+            state.title = message.payload.title;
 
             // /analyse took a few seconds — check real audible state now
             const tab = await chrome.tabs.get(tabId);
@@ -38,6 +42,32 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
                 );
             }
         }
+    }
+});
+
+// ─── Heartbeat ───────────────────────────────────────────────────────────────
+chrome.alarms.create(HEARTBEAT, { periodInMinutes: 15 / 60 });
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name !== HEARTBEAT) return;
+
+    for (const [tabIdStr, state] of Object.entries(tabSessions)) {
+        if (!state.sessionId || !state.isSong) continue;
+
+        accumulateTime(state);
+
+        if (state.totalListenMs === state.lastSentMs) continue; // No new listening time to report
+
+        const listeningTime = (state.totalListenMs / 1000).toFixed(1);
+        console.log(`💓 [tab ${tabIdStr}] ${state.title} — ${listeningTime}s`);
+
+        await fetch("http://localhost:3000/listen", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: state.sessionId, listeningTime }),
+        }).catch((err) =>
+            console.error(`[tab ${tabIdStr}] heartbeat failed:`, err),
+        );
     }
 });
 

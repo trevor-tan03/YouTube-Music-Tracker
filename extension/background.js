@@ -2,69 +2,20 @@ let tabSessions = {};
 const HEARTBEAT = "heartbeat";
 
 // ─── Message Events ──────────────────────────────────────────────────────────────────
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message) return;
 
     const tabId = sender.tab?.id;
-    if (!tabId) return;
 
     switch (message.type) {
         case "newVideo": {
-            // If we already have a session for this tab, flush its listening time before starting a new one
-            const existing = tabSessions[tabId];
-            if (existing?.sessionId && existing?.isSong) {
-                accumulateTime(existing);
-                const listeningTime = (existing.totalListenMs / 1000).toFixed(
-                    1,
-                );
-                if (existing.totalListenMs !== existing.lastSentMs) {
-                    await fetch("http://localhost:3000/listen", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            sessionId: existing.sessionId,
-                            listeningTime,
-                        }),
-                    }).catch((err) =>
-                        console.error(
-                            `[tab ${tabId}] pre-reset flush failed:`,
-                            err,
-                        ),
-                    );
-                }
-            }
-
-            tabSessions[tabId] = {
-                sessionId: null,
-                isSong: false,
-                isPlaying: false,
-                title: null,
-                lastSentMs: 0,
-                totalListenMs: 0,
-                startTime: 0,
-            };
-
-            const res = await fetch("http://localhost:3000/analyse", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(message.payload),
-            });
-
-            const data = await res.json();
-            const state = tabSessions[tabId];
-            state.sessionId = data?.sessionId ?? null;
-            state.isSong = data?.isSong ?? null;
-            state.title = message.payload.title;
-
-            // /analyse took a few seconds — check real audible state now
-            const tab = await chrome.tabs.get(tabId);
-            if (tab.audible) {
-                state.isPlaying = true;
-                state.startTime = Date.now();
-                console.log(
-                    `▶️ [tab ${tabId}] already audible after analyse — clock started`,
-                );
-            }
+            if (!tabId) return;
+            handleNewVideo(tabId, message.payload); // async work moved out
+            return;
+        }
+        case "getTabSessions": {
+            sendResponse(tabSessions);
+            return true;
         }
     }
 });
@@ -131,5 +82,60 @@ function accumulateTime(state) {
     if (state.isPlaying) {
         state.totalListenMs += Date.now() - state.startTime;
         state.startTime = Date.now();
+    }
+}
+
+async function handleNewVideo(tabId, payload) {
+    const existing = tabSessions[tabId];
+    if (existing?.sessionId && existing?.isSong) {
+        accumulateTime(existing);
+        const listeningTime = (existing.totalListenMs / 1000).toFixed(1);
+        if (existing.totalListenMs !== existing.lastSentMs) {
+            await fetch("http://localhost:3000/listen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionId: existing.sessionId,
+                    listeningTime,
+                }),
+            }).catch((err) =>
+                console.error(`[tab ${tabId}] pre-reset flush failed:`, err),
+            );
+        }
+    }
+
+    tabSessions[tabId] = {
+        sessionId: null,
+        isSong: false,
+        isPlaying: false,
+        thumbnailUrl: null,
+        channel: null,
+        title: null,
+        lastSentMs: 0,
+        totalListenMs: 0,
+        startTime: 0,
+    };
+
+    const res = await fetch("http://localhost:3000/analyse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    const state = tabSessions[tabId];
+    state.sessionId = data?.sessionId ?? null;
+    state.isSong = data?.isSong ?? null;
+    state.title = payload.title;
+    state.thumbnailUrl = payload.thumbnailUrl;
+    state.channel = payload.channel;
+
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.audible) {
+        state.isPlaying = true;
+        state.startTime = Date.now();
+        console.log(
+            `▶️ [tab ${tabId}] already audible after analyse — clock started`,
+        );
     }
 }

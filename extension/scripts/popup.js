@@ -43,17 +43,15 @@ function renderVideos(videos) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    if (chrome.storage.session) {
-        const allItems = await chrome.storage.session.get(null);
-        const videos = Object.entries(allItems)
-            .filter(([key]) => key.startsWith("currentVideo_"))
-            .map(([, value]) => value);
+    chrome.runtime.sendMessage({ type: "getTabSessions" }, (tabSessions) => {
+        const videos = Object.values(tabSessions ?? {})
+            .filter((state) => state.isSong !== null)
+            .map((state) => ({
+                title: state.title,
+                channel: state.channel,
+                thumbnailUrl: state.thumbnailUrl,
+                isSong: state.isSong,
+            }));
         renderVideos(videos);
-    } else {
-        renderVideos([]);
-    }
-
-    document.getElementById("open-dashboard").addEventListener("click", () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
     });
 });

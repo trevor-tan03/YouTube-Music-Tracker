@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import OpenAI from "openai";
 import { db } from "../database/database.js";
+import { heuristicsCheck } from "../util/songHeuristic.js";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -40,12 +41,20 @@ export async function analyseVideo(request: Request, res: Response) {
             sessionId,
         });
     }
+
+    const heuristicResult = await heuristicsCheck(body.title, body.channel, body.description, body.duration, body.genre);
+    if (heuristicResult.isSong && heuristicResult.confidence === "high") {
+        // Handle the case where the video is classified as a song with high confidence
+    }
+
+    
 }
 
 interface RequestBody {
     title: string;
     channel: string;
     description: string;
+    duration: number;
     videoId: string;
     genre: string;
 }

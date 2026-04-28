@@ -6,14 +6,14 @@ export interface HeuristicSignal {
     score: number;
 }
 
-export interface HeuristicResult {
-    isSong: boolean;
-    confidence: "low" | "medium" | "high";
-    score: number;
-    signals: HeuristicSignal[];
-    reason: string;
-    type: "heuristic";
-}
+// export interface HeuristicResult {
+//     isSong: boolean;
+//     confidence: "low" | "medium" | "high";
+//     score: number;
+//     signals: HeuristicSignal[];
+//     reason: string;
+//     type: "heuristic";
+// }
 
 export async function heuristicsCheck(
     title: string,
@@ -21,7 +21,7 @@ export async function heuristicsCheck(
     description: string,
     duration: number,
     genre: string,
-): Promise<HeuristicResult> {
+) {
     const signals: HeuristicSignal[] = [];
     let score = 0;
 

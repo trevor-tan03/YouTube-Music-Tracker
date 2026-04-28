@@ -9,9 +9,9 @@ export interface VideoTable {
     id: string;
     title: string;
     channel: string;
-    description: string;
+    description: string | undefined;
     duration: number;
-    genre: string;
+    genre: string | undefined;
     is_song: 0 | 1;
     created_at: ColumnType<Date, string | undefined, never>;
 }

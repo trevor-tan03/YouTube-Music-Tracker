@@ -10,6 +10,30 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
     switch (message.type) {
         case "newVideo": {
+            // If we already have a session for this tab, flush its listening time before starting a new one
+            const existing = tabSessions[tabId];
+            if (existing?.sessionId && existing?.isSong) {
+                accumulateTime(existing);
+                const listeningTime = (existing.totalListenMs / 1000).toFixed(
+                    1,
+                );
+                if (existing.totalListenMs !== existing.lastSentMs) {
+                    await fetch("http://localhost:3000/listen", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            sessionId: existing.sessionId,
+                            listeningTime,
+                        }),
+                    }).catch((err) =>
+                        console.error(
+                            `[tab ${tabId}] pre-reset flush failed:`,
+                            err,
+                        ),
+                    );
+                }
+            }
+
             tabSessions[tabId] = {
                 sessionId: null,
                 isSong: false,
@@ -56,7 +80,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
         accumulateTime(state);
 
-        if (state.totalListenMs === state.lastSentMs) continue; // No new listening time to report
+        if (
+            Math.abs(state.totalListenMs - state.lastSentMs) < 500 ||
+            !state.isPlaying
+        )
+            continue; // No new listening time to report
 
         const listeningTime = (state.totalListenMs / 1000).toFixed(1);
         console.log(`💓 [tab ${tabIdStr}] ${state.title} — ${listeningTime}s`);

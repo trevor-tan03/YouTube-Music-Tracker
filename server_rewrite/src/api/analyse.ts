@@ -1,14 +1,9 @@
 import { type Request, type Response } from "express";
-import OpenAI from "openai";
 import { db } from "../database/database.js";
 import { heuristicsCheck } from "../util/songHeuristic.js";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
-export async function analyseVideo(request: Request, res: Response) {
-    const body: RequestBody = await request.body;
+export async function analyseVideo(req: Request, res: Response) {
+    const body: RequestBody = await req.body;
 
     if (!body.title || !body.channel || !body.description || !body.videoId) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -42,12 +37,16 @@ export async function analyseVideo(request: Request, res: Response) {
         });
     }
 
-    const heuristicResult = await heuristicsCheck(body.title, body.channel, body.description, body.duration, body.genre);
+    const heuristicResult = await heuristicsCheck(
+        body.title,
+        body.channel,
+        body.description,
+        body.duration,
+        body.genre,
+    );
     if (heuristicResult.isSong && heuristicResult.confidence === "high") {
         // Handle the case where the video is classified as a song with high confidence
     }
-
-    
 }
 
 interface RequestBody {

@@ -7,10 +7,6 @@ interface RequestBody {
 }
 
 export async function addSongListeningTime(req: Request, res: Response) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
     const body: RequestBody = await req.body;
 
     if (!body.sessionId || !body.listeningTime) {

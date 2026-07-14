@@ -26,7 +26,7 @@ export type NewArtistAlias = Insertable<ArtistAliasTable>;
 export type UpdateArtistAlias = Updateable<ArtistAliasTable>;
 
 export interface ArtistSongTable {
-    artist_song_id: Generated<number>;
+    id: Generated<number>;
     video_id: string;
     artist_id: number;
     mapping_type: "manual" | "heuristic" | "llm" | "unknown";

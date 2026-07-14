@@ -9,6 +9,7 @@ import {
 export interface ChannelTable {
     id: Generated<number>;
     channel_name: string;
+    channel_icon: string | null;
     created_at: ColumnType<Date, string | undefined, never>;
     is_music_channel: 0 | 1;
 }

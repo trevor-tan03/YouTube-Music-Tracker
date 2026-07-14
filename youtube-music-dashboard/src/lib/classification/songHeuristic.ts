@@ -92,7 +92,8 @@ export async function heuristicsCheck(
     // YouTube Music auto-generated "Artist – Topic" channels
     if (/ - topic$/i.test(channelLower)) {
         addSignal("channel", "YouTube Music Topic channel", 7);
-    }``
+    }
+    ``;
 
     // Known music channels from DB — use executeTakeFirst (not OrThrow) since
     // most channels won't be in the table

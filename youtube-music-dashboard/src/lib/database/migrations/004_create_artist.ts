@@ -6,6 +6,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
         .addColumn("name", "text", (col) => col.notNull().unique())
         .addColumn("picture", "text")
+        .addColumn("channel_id", "integer", (col) =>
+            col.references("channel.id").onDelete("set null"),
+        )
         .addColumn("created_at", "text", (col) =>
             col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
         )

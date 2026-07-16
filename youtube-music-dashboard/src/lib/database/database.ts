@@ -22,8 +22,10 @@ export interface Database {
     channel: ChannelTable;
 }
 
+export const sqliteDb = new SQLite("youtube-music-tracker.db");
+
 const dialect = new SqliteDialect({
-    database: new SQLite("youtube-music-tracker.db"),
+    database: sqliteDb,
 });
 
 export const db = new Kysely<Database>({

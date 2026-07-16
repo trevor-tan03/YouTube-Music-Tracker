@@ -1,14 +1,6 @@
 import { sqliteDb } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
-export async function GET() {
-    const artists = sqliteDb
-        .prepare(`SELECT * FROM artist ORDER BY LOWER(name) ASC`)
-        .all();
-
-    return NextResponse.json(artists);
-}
-
 export async function POST(request: Request) {
     try {
         const { name } = await request.json();

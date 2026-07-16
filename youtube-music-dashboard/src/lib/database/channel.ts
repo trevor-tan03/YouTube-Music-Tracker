@@ -8,6 +8,7 @@ import {
 
 export interface ChannelTable {
     id: Generated<number>;
+    channel_id: string | null;
     channel_name: string;
     channel_icon: string | null;
     created_at: ColumnType<Date, string | undefined, never>;

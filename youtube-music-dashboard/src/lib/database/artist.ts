@@ -10,6 +10,7 @@ export interface ArtistTable {
     id: Generated<number>;
     name: string;
     picture: string | null;
+    channel_id: number | null;
     created_at: ColumnType<Date, string | undefined, never>;
 }
 export type Artist = Selectable<ArtistTable>;
@@ -29,6 +30,7 @@ export interface ArtistSongTable {
     id: Generated<number>;
     video_id: string;
     artist_id: number;
+    channel_id: number | null;
     mapping_type: "manual" | "heuristic" | "llm" | "unknown";
 }
 export type ArtistSong = Selectable<ArtistSongTable>;

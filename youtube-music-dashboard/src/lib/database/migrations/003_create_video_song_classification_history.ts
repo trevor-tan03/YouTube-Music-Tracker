@@ -8,8 +8,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             col.notNull().references("video.id").onDelete("cascade"),
         )
         .addColumn("is_song", "integer", (col) => col.notNull())
-        .addColumn("type", "text", (col) => col.notNull()) // "manual" | "heuristic" | "llm"
-        .addColumn("reason", "text")
+        .addColumn("type", "text", (col) => col.notNull()) // "manual" | "heuristic" | "llm" | "unknown"
         .addColumn("classified_at", "text", (col) =>
             col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
         )

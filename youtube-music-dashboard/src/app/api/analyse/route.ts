@@ -1,110 +1,130 @@
-import { sqliteDb } from "@/src/lib/database/database";
+import { heuristicsCheck } from "@/src/lib/classification/songHeuristic";
+import { db } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
-    try {
-        const { title, channel, description, videoId, thumbnailUrl, genre } =
-            await request.json();
+interface RequestBody {
+    title: string;
+    channel: string;
+    description: string;
+    duration: number;
+    videoId: string;
+    genre: string;
+}
 
-        if (!videoId || !title || !channel || !description) {
+export async function POST(req: Request) {
+    const body: RequestBody = await req.json();
+
+    if (!body.title || !body.channel || !body.description || !body.videoId) {
+        return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 },
+        );
+    }
+
+    const existingVideo = await db
+        .selectFrom("video")
+        .selectAll()
+        .where("video.id", "=", body.videoId)
+        .executeTakeFirst();
+
+    if (existingVideo) {
+        if (!existingVideo.is_song) {
             return NextResponse.json(
                 {
-                    error: "Missing required fields: videoId, title, channel, description",
+                    message:
+                        "Video is registered as NOT a song. Listening time will not be tracked.",
+                    isSong: false,
                 },
                 { status: 400 },
             );
         }
 
-        const existingVideo = sqliteDb
-            .prepare(`SELECT * FROM video WHERE id = ?`)
-            .get(videoId) as
-            | { id: string; title: string; is_song: number }
-            | undefined;
+        const session = await createListeningSession(body.videoId);
+        return NextResponse.json({
+            message: `Tracking listening time of ${existingVideo.title} 🎧`,
+            isSong: true,
+            sessionId: session.id,
+        });
+    }
 
-        if (existingVideo) {
-            if (!existingVideo.is_song) {
-                return NextResponse.json(
-                    {
-                        message:
-                            "Video is registered as NOT a song. Listening time will not be tracked.",
-                        isSong: Boolean(existingVideo.is_song),
-                    },
-                    { status: 400 },
-                );
-            }
+    const heuristicResult = await heuristicsCheck(
+        body.title,
+        body.channel,
+        body.description,
+        body.duration,
+        body.genre,
+    );
 
-            const sessionId = createListeningSession(videoId);
-            return NextResponse.json({
-                message: `Tracking listening time of ${existingVideo.title} 🎧`,
-                sessionId,
-                isSong: Boolean(existingVideo.is_song),
-            });
-        }
-
-        const isSong = genre === "Music";
-        const message = registerVideo(
-            { title, channel, description, videoId, thumbnailUrl, genre },
-            isSong,
+    if (heuristicResult.confidence === "high") {
+        const { video } = await registerVideo(
+            {
+                id: body.videoId,
+                title: body.title,
+                channel_id: null,
+                legacy_channel_name: body.channel,
+                description: body.description,
+                duration: body.duration,
+                is_song: heuristicResult.isSong ? 1 : 0,
+            },
+            "heuristic",
         );
-        const sessionId = isSong ? createListeningSession(videoId) : null;
 
         return NextResponse.json({
-            message,
-            sessionId,
-            isSong,
+            message: heuristicResult.isSong
+                ? "Video registered as a song."
+                : "Video registered as NOT a song.",
+            isSong: heuristicResult.isSong,
+            videoId: video.id,
         });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Unknown error" },
-            { status: 500 },
-        );
     }
+
+    // Low-confidence heuristic — no LLM fallback wired up yet
+    return NextResponse.json(
+        { message: "Could not confidently classify video.", isSong: null },
+        { status: 202 },
+    );
 }
 
-function registerVideo(
-    details: {
-        title: string;
-        channel: string;
-        description: string;
-        videoId: string;
-        thumbnailUrl?: string | null;
-        genre?: string;
-    },
-    isSong: boolean,
+interface VideoDetails {
+    id: string;
+    title: string;
+    channel_id: number | null;
+    legacy_channel_name: string | null;
+    description: string | null;
+    duration: number;
+    is_song: 0 | 1;
+}
+
+async function registerVideo(
+    videoDetails: VideoDetails,
+    type: "manual" | "heuristic" | "llm" | "unknown",
 ) {
-    sqliteDb
-        .prepare(
-            `INSERT INTO video (id, title, channel_id, legacy_channel_name, description, duration, is_song) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-            details.videoId,
-            details.title,
-            null,
-            details.channel,
-            details.description,
-            0,
-            isSong ? 1 : 0,
-        );
+    const video = await db
+        .insertInto("video")
+        .values(videoDetails)
+        .returningAll()
+        .executeTakeFirstOrThrow();
 
-    const message = `Registered ${details.title} as ${isSong ? "" : "NOT "}a song.`;
+    const classification = await db
+        .insertInto("video_song_classification_history")
+        .values({
+            video_id: video.id,
+            is_song: video.is_song,
+            type,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
 
-    if (isSong) {
-        const unmappedArtistId = 98;
-        sqliteDb
-            .prepare(
-                `INSERT INTO artist_song (video_id, artist_id, mapping_type) VALUES (?, ?, ?)`,
-            )
-            .run(details.videoId, unmappedArtistId, "unknown");
-    }
-
-    return message;
+    return { video, classification };
 }
 
-function createListeningSession(videoId: string) {
-    const result = sqliteDb
-        .prepare(
-            "INSERT INTO listening_session (video_id, listening_time) VALUES (?, 0)",
-        )
-        .run(videoId);
-    return result.lastInsertRowid;
+async function createListeningSession(videoId: string) {
+    return await db
+        .insertInto("listening_session")
+        .values({
+            video_id: videoId,
+            listening_time: 0,
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
 }

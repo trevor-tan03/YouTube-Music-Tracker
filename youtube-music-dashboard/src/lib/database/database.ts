@@ -2,8 +2,8 @@ import SQLite from "better-sqlite3";
 import { Kysely, SqliteDialect } from "kysely";
 import type {
     ArtistAliasTable,
-    ArtistSongTable,
     ArtistTable,
+    ArtistVideoTable,
 } from "./artist.js";
 import type { ChannelTable } from "./channel.js";
 import type { ListeningSessionTable } from "./listeningSession.js";
@@ -18,7 +18,7 @@ export interface Database {
     video_song_classification_history: VideoSongClassificationHistoryTable;
     artist: ArtistTable;
     artist_alias: ArtistAliasTable;
-    artist_song: ArtistSongTable;
+    artist_video: ArtistVideoTable;
     channel: ChannelTable;
 }
 

@@ -9,8 +9,7 @@ import {
 export interface ArtistTable {
     id: Generated<number>;
     name: string;
-    picture: string | null;
-    channel_id: number | null;
+    channel_id: number;
     created_at: ColumnType<Date, string | undefined, never>;
 }
 export type Artist = Selectable<ArtistTable>;
@@ -26,13 +25,13 @@ export type ArtistAlias = Selectable<ArtistAliasTable>;
 export type NewArtistAlias = Insertable<ArtistAliasTable>;
 export type UpdateArtistAlias = Updateable<ArtistAliasTable>;
 
-export interface ArtistSongTable {
+export interface ArtistVideoTable {
     id: Generated<number>;
     video_id: string;
     artist_id: number;
-    channel_id: number | null;
     mapping_type: "manual" | "heuristic" | "llm" | "unknown";
+    created_at: ColumnType<Date, string | undefined, never>;
 }
-export type ArtistSong = Selectable<ArtistSongTable>;
-export type NewArtistSong = Insertable<ArtistSongTable>;
-export type UpdateArtistSong = Updateable<ArtistSongTable>;
+export type ArtistSong = Selectable<ArtistVideoTable>;
+export type NewArtistSong = Insertable<ArtistVideoTable>;
+export type UpdateArtistSong = Updateable<ArtistVideoTable>;

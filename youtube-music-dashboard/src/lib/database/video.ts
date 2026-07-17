@@ -6,10 +6,9 @@ import {
 } from "kysely";
 
 export interface VideoTable {
-    id: string;
+    id: Generated<string>;
     title: string;
-    channel_id: number | null; // Foreign key to channel table. Older videos may not have a channel_id, so we need to allow nulls here
-    legacy_channel_name: string | null; // Scraped the channel name directly in old videos, so we need to keep it for legacy purposes
+    channel_id: number;
     description: string | null;
     duration: number;
     is_song: 0 | 1;

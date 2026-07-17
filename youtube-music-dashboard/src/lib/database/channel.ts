@@ -8,11 +8,9 @@ import {
 
 export interface ChannelTable {
     id: Generated<number>;
-    channel_id: string | null;
-    channel_name: string;
-    channel_icon: string | null;
+    name: string;
+    avatar: string | null;
     created_at: ColumnType<Date, string | undefined, never>;
-    is_music_channel: 0 | 1;
 }
 export type Channel = Selectable<ChannelTable>;
 export type NewChannel = Insertable<ChannelTable>;

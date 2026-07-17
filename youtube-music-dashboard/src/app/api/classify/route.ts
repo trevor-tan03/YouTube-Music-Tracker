@@ -1,4 +1,4 @@
-import { sqliteDb } from "@/src/lib/database/database";
+import { db } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -14,9 +14,11 @@ export async function POST(request: Request) {
             );
         }
 
-        const existingVideo = sqliteDb
-            .prepare("SELECT id FROM video WHERE id = ?")
-            .get(videoId);
+        const existingVideo = await db
+            .selectFrom("video")
+            .select("id")
+            .where("video.id", "=", videoId)
+            .executeTakeFirstOrThrow();
 
         if (!existingVideo) {
             return NextResponse.json(
@@ -25,9 +27,13 @@ export async function POST(request: Request) {
             );
         }
 
-        sqliteDb
-            .prepare("UPDATE video SET is_song = ? WHERE id = ?")
-            .run(isSong ? 1 : 0, videoId);
+        await db
+            .updateTable("video")
+            .set({
+                is_song: isSong ? 1 : 0,
+            })
+            .where("video.id", "=", existingVideo.id)
+            .executeTakeFirstOrThrow();
 
         return NextResponse.json({
             message: `isSong has been set to: ${isSong}`,

@@ -12,8 +12,9 @@ export async function analyseVideo(req, res) {
             description,
             videoId,
             thumbnailUrl,
-            // duration,
+            duration,
             genre,
+            avatar,
         } = req.body;
         let message;
 

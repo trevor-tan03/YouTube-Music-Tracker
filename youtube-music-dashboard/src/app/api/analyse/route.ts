@@ -9,6 +9,7 @@ interface RequestBody {
     duration: number;
     videoId: string;
     genre: string;
+    avatar: string;
 }
 
 export async function POST(req: Request) {
@@ -58,13 +59,13 @@ export async function POST(req: Request) {
     if (heuristicResult.confidence === "high") {
         const { video } = await registerVideo(
             {
-                id: body.videoId,
+                videoId: body.videoId,
                 title: body.title,
-                channel_id: null,
-                legacy_channel_name: body.channel,
+                channelName: body.channel,
+                channelAvatar: body.avatar,
                 description: body.description,
                 duration: body.duration,
-                is_song: heuristicResult.isSong ? 1 : 0,
+                isSong: heuristicResult.isSong ? 1 : 0,
             },
             "heuristic",
         );
@@ -86,22 +87,45 @@ export async function POST(req: Request) {
 }
 
 interface VideoDetails {
-    id: string;
+    videoId: string;
     title: string;
-    channel_id: number | null;
-    legacy_channel_name: string | null;
+    channelName: string;
+    channelAvatar: string;
     description: string | null;
     duration: number;
-    is_song: 0 | 1;
+    isSong: 0 | 1;
 }
 
 async function registerVideo(
     videoDetails: VideoDetails,
     type: "manual" | "heuristic" | "llm" | "unknown",
 ) {
+    let channel = await db
+        .selectFrom("channel")
+        .select("channel.id")
+        .where("channel.name", "=", videoDetails.channelName)
+        .executeTakeFirst();
+
+    if (!channel) {
+        channel = await db
+            .insertInto("channel")
+            .values({
+                name: videoDetails.channelName,
+                avatar: videoDetails.channelAvatar,
+            })
+            .returning("id")
+            .executeTakeFirstOrThrow();
+    }
+
     const video = await db
         .insertInto("video")
-        .values(videoDetails)
+        .values({
+            id: videoDetails.videoId,
+            title: videoDetails.title,
+            channel_id: channel.id,
+            duration: videoDetails.duration,
+            is_song: videoDetails.isSong,
+        })
         .returningAll()
         .executeTakeFirstOrThrow();
 

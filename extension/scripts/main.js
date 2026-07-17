@@ -26,6 +26,8 @@ async function getVideoMetadata() {
         return;
     }
 
+    const avatar = document.querySelector("#avatar > img")[3] || null;
+
     const {
         author: channel,
         name: title,
@@ -44,6 +46,7 @@ async function getVideoMetadata() {
         thumbnailUrl,
         duration: parseIsoDuration(duration),
         uploadDate,
+        avatar,
     };
 }
 

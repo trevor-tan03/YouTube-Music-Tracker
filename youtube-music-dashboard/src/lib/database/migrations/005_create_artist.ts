@@ -24,34 +24,20 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         .execute();
 
     await db.schema
-        .createIndex("artist_alias_alias_idx")
-        .on("artist_alias")
-        .column("alias")
-        .execute();
-
-    await db.schema
-        .createTable("artist_song")
-        .addColumn("artist_song_id", "integer", (col) =>
-            col.primaryKey().autoIncrement(),
+        .createTable("artist_video")
+        .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
+        .addColumn("artist_id", "integer", (col) =>
+            col.notNull().references("artist.id").onDelete("cascade"),
         )
         .addColumn("video_id", "text", (col) =>
             col.notNull().references("video.id").onDelete("cascade"),
         )
-        .addColumn("artist_id", "integer", (col) =>
-            col.notNull().references("artist.id").onDelete("cascade"),
-        )
         .addColumn("mapping_type", "text", (col) => col.notNull())
-        .execute();
-
-    await db.schema
-        .createIndex("artist_song_video_id_idx")
-        .on("artist_song")
-        .column("video_id")
         .execute();
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-    await db.schema.dropTable("artist_song").execute();
+    await db.schema.dropTable("artist_video").execute();
     await db.schema.dropTable("artist_alias").execute();
     await db.schema.dropTable("artist").execute();
 }

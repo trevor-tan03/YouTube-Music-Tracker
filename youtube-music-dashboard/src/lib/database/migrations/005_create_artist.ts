@@ -5,7 +5,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         .createTable("artist")
         .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
         .addColumn("name", "text", (col) => col.notNull().unique())
-        .addColumn("picture", "text")
         .addColumn("channel_id", "integer", (col) =>
             col.references("channel.id").onDelete("set null"),
         )
@@ -20,7 +19,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         .addColumn("artist_id", "integer", (col) =>
             col.notNull().references("artist.id").onDelete("cascade"),
         )
-        .addColumn("alias", "text", (col) => col.notNull())
+        .addColumn("alias", "text", (col) => col.notNull().unique())
         .execute();
 
     await db.schema
@@ -30,7 +29,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             col.notNull().references("artist.id").onDelete("cascade"),
         )
         .addColumn("video_id", "text", (col) =>
-            col.notNull().references("video.id").onDelete("cascade"),
+            col.notNull().unique().references("video.id").onDelete("cascade"),
         )
         .addColumn("mapping_type", "text", (col) => col.notNull())
         .execute();

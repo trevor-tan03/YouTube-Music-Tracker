@@ -1,17 +1,26 @@
-import { sqliteDb } from "@/src/lib/database/database";
+import { db } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const artists = sqliteDb
-        .prepare(`SELECT * FROM artist ORDER BY LOWER(name) ASC`)
-        .all();
+    const artists = await db
+        .selectFrom("artist")
+        .fullJoin("channel", "artist.channel_id", "channel.id")
+        .select([
+            "artist.id",
+            "artist.name",
+            "artist.channel_id",
+            "channel.name",
+            "channel.avatar",
+        ])
+        .orderBy((eb) => eb.fn("lower", ["artist.name"]), "asc")
+        .executeTakeFirstOrThrow();
 
     return NextResponse.json(artists);
 }
 
 export async function POST(request: Request) {
     try {
-        const { name } = await request.json();
+        const { name, channelId } = await request.json();
 
         if (!name) {
             return NextResponse.json(
@@ -20,19 +29,40 @@ export async function POST(request: Request) {
             );
         }
 
-        if (sqliteDb.prepare(`SELECT 1 FROM artist WHERE name = ?`).get(name)) {
+        const artist = await db
+            .selectFrom("artist")
+            .select("artist.name")
+            .where("artist.name", "=", name)
+            .executeTakeFirstOrThrow();
+
+        if (artist) {
             return NextResponse.json(
                 { error: "Artist already exists" },
                 { status: 400 },
             );
         }
 
-        const result = sqliteDb
-            .prepare(`INSERT INTO artist (name) VALUES (?)`)
-            .run(name);
-        const newArtist = sqliteDb
-            .prepare(`SELECT * FROM artist WHERE id = ?`)
-            .get(result.lastInsertRowid);
+        const channel = await db
+            .selectFrom("channel")
+            .select("channel.id")
+            .where("channel.name", "=", channelId)
+            .executeTakeFirstOrThrow();
+
+        if (!channel) {
+            return NextResponse.json(
+                { error: `Channel Id: ${channelId} does not exist` },
+                { status: 400 },
+            );
+        }
+
+        const newArtist = await db
+            .insertInto("artist")
+            .values({
+                name: name,
+                channel_id: channelId,
+            })
+            .returning(["artist.id", "artist.name", "artist.channel_id"])
+            .executeTakeFirstOrThrow();
 
         return NextResponse.json(newArtist);
     } catch {

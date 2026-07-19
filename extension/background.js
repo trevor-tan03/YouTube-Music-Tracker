@@ -1,5 +1,7 @@
 let tabSessions = {};
 const HEARTBEAT = "heartbeat";
+// const apiURL = "http://localhost:3001/api";
+const apiURL = "http://localhost:3000";
 
 // ─── Message Events ──────────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -40,7 +42,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         const listeningTime = (state.totalListenMs / 1000).toFixed(1);
         console.log(`💓 [tab ${tabIdStr}] ${state.title} — ${listeningTime}s`);
 
-        await fetch("http://localhost:3000/listen", {
+        await fetch(`${apiURL}/listen`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sessionId: state.sessionId, listeningTime }),
@@ -91,7 +93,7 @@ async function handleNewVideo(tabId, payload) {
         accumulateTime(existing);
         const listeningTime = (existing.totalListenMs / 1000).toFixed(1);
         if (existing.totalListenMs !== existing.lastSentMs) {
-            await fetch("http://localhost:3000/listen", {
+            await fetch(`${apiURL}/listen`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -116,7 +118,7 @@ async function handleNewVideo(tabId, payload) {
         startTime: 0,
     };
 
-    const res = await fetch("http://localhost:3000/analyse", {
+    const res = await fetch(`${apiURL}/analyse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -32,7 +32,7 @@ export async function heuristicsCheck(
     // ===========================================================================
 
     if (genre === "music") {
-        score += 6;
+        score += 10;
     } else if (
         genre === "science & technology" ||
         genre === "gaming" ||

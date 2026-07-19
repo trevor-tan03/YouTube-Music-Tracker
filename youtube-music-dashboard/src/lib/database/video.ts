@@ -8,7 +8,7 @@ import {
 export interface VideoTable {
     id: Generated<string>;
     title: string;
-    channel_id: number;
+    channel_id: number | null;
     description: string | null;
     duration: number;
     is_song: 0 | 1;

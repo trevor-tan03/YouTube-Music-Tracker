@@ -1,4 +1,4 @@
-import { sqliteDb } from "@/src/lib/database/database";
+import { db } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -12,9 +12,12 @@ export async function POST(request: Request) {
             );
         }
 
-        const artist = sqliteDb
-            .prepare(`SELECT id FROM artist WHERE id = ?`)
-            .get(artistId) as { id: number } | undefined;
+        const artist = await db
+            .selectFrom("artist")
+            .select("artist.id")
+            .where("artist.id", "=", artistId)
+            .executeTakeFirstOrThrow();
+
         if (!artist) {
             return NextResponse.json(
                 { error: "Artist not found" },
@@ -22,9 +25,12 @@ export async function POST(request: Request) {
             );
         }
 
-        const video = sqliteDb
-            .prepare(`SELECT id FROM video WHERE id = ?`)
-            .get(videoId);
+        const video = await db
+            .selectFrom("video")
+            .select("video.id")
+            .where("video.id", "=", videoId)
+            .executeTakeFirstOrThrow();
+
         if (!video) {
             return NextResponse.json(
                 { error: "Video not found" },
@@ -32,11 +38,24 @@ export async function POST(request: Request) {
             );
         }
 
-        sqliteDb
-            .prepare(
-                `INSERT OR REPLACE INTO artist_song (video_id, artist_id, mapping_type) VALUES (?, ?, ?)`,
+        await db
+            .insertInto("artist_video")
+            .values({
+                video_id: videoId,
+                artist_id: artist.id,
+                mapping_type: "manual",
+            })
+            .onConflict((oc) =>
+                oc
+                    // 1. Specify the column(s) that trigger the conflict (e.g., video_id)
+                    .column("video_id")
+                    // 2. Define what to update if that conflict happens
+                    .doUpdateSet({
+                        artist_id: artist.id,
+                        mapping_type: "manual",
+                    }),
             )
-            .run(videoId, artist.id, "unknown");
+            .execute();
 
         return NextResponse.json({
             message: "Artist mapped to video successfully",

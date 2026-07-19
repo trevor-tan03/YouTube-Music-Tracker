@@ -22,7 +22,9 @@ export interface Database {
     channel: ChannelTable;
 }
 
-export const sqliteDb = new SQLite("youtube-music-tracker.db");
+export const sqliteDb = new SQLite(
+    "C:/Programming/YouTube Music Tracker/youtube-music-dashboard/youtube-music-tracker.db",
+);
 
 const dialect = new SqliteDialect({
     database: sqliteDb,

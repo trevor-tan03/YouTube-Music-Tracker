@@ -9,7 +9,7 @@ import {
 export interface ArtistTable {
     id: Generated<number>;
     name: string;
-    channel_id: number;
+    channel_id: number | null;
     created_at: ColumnType<Date, string | undefined, never>;
 }
 export type Artist = Selectable<ArtistTable>;

@@ -22,7 +22,7 @@ export async function analyseVideo(req, res) {
         console.log(`Genre: ${genre || "(undefined)"}`);
 
         // Validate required fields
-        if (!videoId || !title || !channel || !description) {
+        if (!videoId || !title || !channel) {
             console.error(
                 "Missing required fields: videoId, title, channel, description",
             );

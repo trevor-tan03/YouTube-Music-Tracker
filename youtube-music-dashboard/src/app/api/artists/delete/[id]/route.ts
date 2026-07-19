@@ -1,14 +1,16 @@
-import { sqliteDb } from "@/src/lib/database/database";
+import { db } from "@/src/lib/database/database";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
     _request: Request,
-    { params }: { params: Promise<{ id: string }> },
+    { params }: { params: Promise<{ id: number }> },
 ) {
     const { id } = await params;
-    const artist = sqliteDb
-        .prepare(`SELECT * FROM artist WHERE id = ?`)
-        .get(id);
+    const artist = await db
+        .selectFrom("artist")
+        .select("artist.id")
+        .where("artist.id", "=", id)
+        .executeTakeFirstOrThrow();
 
     if (!artist) {
         return NextResponse.json(
@@ -17,7 +19,10 @@ export async function DELETE(
         );
     }
 
-    sqliteDb.prepare(`DELETE FROM artist WHERE id = ?`).run(id);
+    await db
+        .deleteFrom("artist")
+        .where("artist.id", "=", id)
+        .executeTakeFirstOrThrow();
 
     return NextResponse.json({ message: "Artist deleted successfully" });
 }

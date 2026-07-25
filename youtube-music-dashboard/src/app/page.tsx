@@ -1,58 +1,77 @@
-import { DashboardNav } from "@/src/app/components/DashboardNav";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-async function getDashboardData() {
-    const [artistsResponse, songsResponse] = await Promise.all([
-        fetch("http://localhost:3001/api/artists", { cache: "no-store" }),
-        fetch("http://localhost:3001/api/songs?limit=5", { cache: "no-store" }),
-    ]);
-
-    const artists = await artistsResponse.json();
-    const songsData = await songsResponse.json();
-
-    return { artists, songsData };
-}
-
-export default async function Home() {
-    const { artists, songsData } = await getDashboardData();
-    const songs = songsData.videos ?? [];
-
+export default function Home() {
     return (
-        <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8">
-            <DashboardNav />
-            <h1 className="mb-8 text-3xl font-semibold">
-                YouTube Music Tracker
-            </h1>
-            <div className="grid gap-6 md:grid-cols-2">
-                <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-xl font-semibold">Top artists</h2>
-                    <div className="space-y-3">
-                        {artists
-                            .slice(0, 5)
-                            .map((artist: { id: number; name: string }) => (
-                                <div
-                                    key={artist.id}
-                                    className="rounded-lg bg-zinc-50 px-4 py-3"
-                                >
-                                    {artist.name}
-                                </div>
-                            ))}
-                    </div>
-                </section>
-
-                <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-xl font-semibold">Recent songs</h2>
-                    <div className="space-y-3">
-                        {songs.map((video: { id: string; title: string }) => (
-                            <div
-                                key={video.id}
-                                className="rounded-lg bg-zinc-50 px-4 py-3"
-                            >
-                                {video.title}
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            </div>
-        </main>
+        <Tabs defaultValue="overview" className="w-[100]">
+            <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="reports">Reports</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Overview</CardTitle>
+                        <CardDescription>
+                            View your key metrics and recent project activity.
+                            Track progress across all your active projects.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                        You have 12 active projects and 3 pending tasks.
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="analytics">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Analytics</CardTitle>
+                        <CardDescription>
+                            Track performance and user engagement metrics.
+                            Monitor trends and identify growth opportunities.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                        Page views are up 25% compared to last month.
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="reports">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Reports</CardTitle>
+                        <CardDescription>
+                            Generate and download your detailed reports. Export
+                            data in multiple formats for analysis.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                        You have 5 reports ready and available to export.
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="settings">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Settings</CardTitle>
+                        <CardDescription>
+                            Manage your account preferences and options.
+                            Customize your experience to fit your needs.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                        Configure notifications, security, and themes.
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
     );
 }

@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "src/lib/helpers/migrate-old-db-to-new.js"  ],
   "exclude": ["node_modules"]
 }

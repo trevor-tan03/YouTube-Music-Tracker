@@ -1,7 +1,7 @@
 let tabSessions = {};
 const HEARTBEAT = "heartbeat";
-// const apiURL = "http://localhost:3001/api";
-const apiURL = "http://localhost:3000";
+const apiURL = "http://localhost:3001/api";
+// const apiURL = "http://localhost:3000";
 
 // ─── Message Events ──────────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -18,6 +18,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case "getTabSessions": {
             sendResponse(tabSessions);
             return true;
+        }
+        case "updateChannelAvatar": {
+            updateChannelAvatar(message.payload)
+            return;
         }
     }
 });
@@ -140,4 +144,12 @@ async function handleNewVideo(tabId, payload) {
             `▶️ [tab ${tabId}] already audible after analyse — clock started`,
         );
     }
+}
+
+async function updateChannelAvatar() {
+    const res = await fetch(`${apiURL}/channel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
 }

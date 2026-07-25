@@ -32,6 +32,6 @@ export interface ArtistVideoTable {
     mapping_type: "manual" | "heuristic" | "llm" | "unknown";
     created_at: ColumnType<Date, string | undefined, never>;
 }
-export type ArtistSong = Selectable<ArtistVideoTable>;
-export type NewArtistSong = Insertable<ArtistVideoTable>;
-export type UpdateArtistSong = Updateable<ArtistVideoTable>;
+export type ArtistVideo = Selectable<ArtistVideoTable>;
+export type NewArtistVideo = Insertable<ArtistVideoTable>;
+export type UpdateArtistVideo = Updateable<ArtistVideoTable>;

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         .selectFrom("video")
         .selectAll()
         .where("video.id", "=", body.videoId)
-        .executeTakeFirst();
+        .executeTakeFirstOrThrow();
 
     if (existingVideo) {
         if (!existingVideo.is_song) {

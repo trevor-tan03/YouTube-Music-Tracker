@@ -66,4 +66,22 @@ window.addEventListener("yt-navigate-finish", async () => {
             payload: videoData,
         });
     }
+
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const avatar = document.querySelector(
+        "#owner > ytd-video-owner-renderer > a",
+    );
+    const avatarSrc = avatar.querySelector("img")?.src;
+
+    // Send a request to
+    if (avatarSrc) {
+        chrome.runtime.sendMessage({
+            type: "updateChannelAvatar",
+            payload: {
+                videoId: videoData.videoId,
+                avatar: avatarSrc,
+            },
+        });
+    }
 });

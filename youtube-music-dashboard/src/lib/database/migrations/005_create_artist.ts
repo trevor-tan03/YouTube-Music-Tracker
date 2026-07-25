@@ -32,6 +32,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             col.notNull().unique().references("video.id").onDelete("cascade"),
         )
         .addColumn("mapping_type", "text", (col) => col.notNull())
+        .addColumn("created_at", "text", (col) =>
+            col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+        )
         .execute();
 }
 
